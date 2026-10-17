@@ -12,6 +12,7 @@ trong package `boundary_unlearning/`, có thể import độc lập sau khi clon
 | `training.py` | Train/retrain, checkpoint và đánh giá accuracy |
 | `unlearning.py` | Boundary Shrink và Boundary Expanding |
 | `reporting.py` | Bảng so sánh kết quả trong notebook |
+| `artifacts.py` | Thu gom kết quả và tạo file ZIP để tải về |
 | `constants.py` | Tên lớp và các hằng số chuẩn hóa |
 
 ## Chạy từ GitHub trên Kaggle
@@ -40,7 +41,24 @@ Notebook vẫn giữ cấu hình mặc định: profile `paper`, train/retrain 3
 `0.1`, batch 64; unlearning 10 epoch với LR `1e-5`. Train dùng đủ 50.000 ảnh, đánh
 giá bằng test CIFAR-10 chính thức có nhãn. Lần chạy đầu tải tập test qua torchvision.
 
-Checkpoint và các file metrics/config nằm trong `/kaggle/working`.
+Các đầu ra nằm trong `/kaggle/working/result/`:
+
+```text
+result/
+├── checkpoints/              # Original, retrain và các model unlearning
+├── <run_tag>_metrics.csv
+├── <run_tag>_config.json
+└── <run_tag>_results.html     # Bảng so sánh kết quả
+```
+
+Chạy cell **Export results** ở cuối notebook để tạo
+`/kaggle/working/result.zip` và hiện link tải. File ZIP chứa cả thư mục `result/`,
+không chứa dataset tải về hoặc code repo.
+
+Có thể chạy lại riêng cell export sau khi cập nhật code. Cell này dùng các kết quả
+đã có trong phiên hiện tại, đồng thời sao chép checkpoint/metrics/config từ đường
+dẫn cũ nếu cần; không train hoặc đánh giá model lại. Các lần chạy trước trong
+`result/` cũng được giữ và đưa vào ZIP.
 
 ## Import trực tiếp
 
