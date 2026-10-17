@@ -1,1 +1,4 @@
 ref-code
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
