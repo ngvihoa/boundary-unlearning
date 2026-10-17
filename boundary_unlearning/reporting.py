@@ -3,7 +3,7 @@
 import pandas as pd
 
 
-def results_table(rows):
+def results_table(rows, *, dataset_name="CIFAR-10"):
     """Format a comparison table without modifying the values exported to CSV."""
     columns = {
         "train_retain_acc": ("Train", "Retain (%)"),
@@ -37,7 +37,7 @@ def results_table(rows):
         frame.style
         .format(formats, na_rep="—")
         .format_index(escape="html", axis=0)
-        .set_caption("Model comparison · Official CIFAR-10 test")
+        .set_caption(f"Model comparison · Official {dataset_name} test")
         .set_properties(**{"text-align": "right", "font-variant-numeric": "tabular-nums"})
         .set_table_styles([
             {"selector": "caption", "props": [("text-align", "left"), ("font-weight", "bold")]},

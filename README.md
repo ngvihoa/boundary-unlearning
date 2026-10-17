@@ -1,11 +1,13 @@
 # Boundary Unlearning trên Kaggle
 
-`experiment.ipynb` chứa cấu hình và các bước chạy thí nghiệm. Các hàm và class nằm
-trong package `boundary_unlearning/`, có thể import độc lập sau khi clone repo.
+`experiment.ipynb` chạy CIFAR-10; `experiment-cifar-100.ipynb` chạy CIFAR-100.
+Các hàm và class nằm trong package `boundary_unlearning/`, có thể import độc lập
+sau khi clone repo.
 
 | File | Nội dung |
 | --- | --- |
 | `data.py` | Đọc NPY/CSV, xử lý nhãn, dataset và DataLoader |
+| `cifar100.py` | Đọc pickle train/test/meta và nhãn fine của CIFAR-100 |
 | `models.py` | AllCNN và khởi tạo classifier |
 | `attacks.py` | FGSM với chuẩn hóa của tác giả |
 | `enhanced.py` | Curvature regularization và weight assignment |
@@ -91,3 +93,30 @@ unlearned_model, stats = run_boundary_shrink(
 Cần Python, NumPy, PyTorch, torchvision, pandas, Jinja2 và IPython. Mở notebook từ thư mục gốc repo, để
 `GITHUB_REPO = ""`, rồi sửa `DATA_ROOT`, `INPUT_ROOT` và `OUTPUT_ROOT` theo máy.
 Các module chỉ định nghĩa hàm/class; import không tải dữ liệu hoặc tự train model.
+
+## Thí nghiệm CIFAR-100
+
+Import `experiment-cifar-100.ipynb` vào Kaggle và gắn dataset
+[alincijov/cifar-100](https://www.kaggle.com/datasets/alincijov/cifar-100) bằng
+**Add Input**. Dataset cung cấp `train`, `test`, `meta` dưới dạng pickle; notebook
+đọc trực tiếp cả train và test có nhãn, không tải CIFAR từ nguồn khác.
+
+`DATA_ROOT` mặc định là `/kaggle/input/datasets/alincijov/cifar-100`, có hỗ trợ đường
+dẫn mount cũ `/kaggle/input/cifar-100` và thư mục con `cifar-100-python/`.
+
+- Dùng `fine_labels` cho **100 lớp**, tên lớp lấy từ `meta`.
+- AllCNN có 100 đầu ra; Boundary Expanding mở thành 101 rồi bỏ lớp phụ.
+- Mặc định `ATTACK_NORMALIZATION = "matched"`, dữ liệu và FGSM dùng cùng mean/std
+  `(0.5, 0.5, 0.5)`. Notebook CIFAR-10 tiếp tục giữ chế độ `repo_exact`.
+- Giữ cấu hình ban đầu: 30 epoch train/retrain, LR `0.1`, batch 64; 10 epoch
+  unlearning, LR `1e-5`. Đây là cấu hình khởi đầu, chưa phải kết quả đã kiểm chứng
+  cho CIFAR-100. Một lớp có 500 ảnh train, tương ứng khoảng 80 bước unlearning.
+- Run tag bắt đầu bằng `cifar100_`; config ghi dataset, loại nhãn, danh sách lớp
+  và chuẩn hóa. Checkpoint, CSV/JSON/HTML nằm trong `result/`; cell cuối tạo
+  `result.zip` giống notebook CIFAR-10.
+
+Kiểm tra loader và nhãn bằng dữ liệu giả lập tại local:
+
+```bash
+python -m unittest discover -s tests -v
+```
