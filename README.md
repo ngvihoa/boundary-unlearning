@@ -1,8 +1,16 @@
 # Boundary Unlearning trên Kaggle
 
-`experiment.ipynb` chạy CIFAR-10; `experiment-cifar-100.ipynb` chạy CIFAR-100.
+[Notebook CIFAR-10](experiments/boundary-unlearning-cifar-10-experiment.ipynb)
+và [notebook CIFAR-100](experiments/experiment-cifar-100.ipynb) nằm trong `experiments/`.
 Các hàm và class nằm trong package `boundary_unlearning/`, có thể import độc lập
 sau khi clone repo.
+
+Thông tin từng thí nghiệm:
+
+- [Thí nghiệm 01 — CIFAR-10, quên lớp deer](experiments/01-cifar-10.md): cấu hình
+  và kết quả đã lưu từ lần chạy Kaggle ngày 17/10/2026.
+- [Thí nghiệm 02 — CIFAR-100, quên lớp beaver](experiments/02-cifar-100.md): cấu
+  hình dự kiến và trạng thái kiểm chứng, chưa có kết quả train đầy đủ.
 
 | File | Nội dung |
 | --- | --- |
@@ -19,10 +27,10 @@ sau khi clone repo.
 
 ## Chạy từ GitHub trên Kaggle
 
-1. Push `boundary_unlearning/`, `experiment.ipynb`, `README.md` và `.gitignore` lên
+1. Push `boundary_unlearning/`, `experiments/`, `README.md` và `.gitignore` lên
    GitHub. `ref-code/` chỉ dùng để đối chiếu và được gitignore; code chạy không phụ
    thuộc thư mục này.
-2. Import `experiment.ipynb` vào Kaggle, gắn dataset
+2. Import `experiments/boundary-unlearning-cifar-10-experiment.ipynb` vào Kaggle, gắn dataset
    `petitbonney/cifar10-image-recognition`, bật **Internet** và **GPU**.
 3. Điền URL repo trong cell đầu:
 
@@ -96,7 +104,7 @@ Các module chỉ định nghĩa hàm/class; import không tải dữ liệu ho�
 
 ## Thí nghiệm CIFAR-100
 
-Import `experiment-cifar-100.ipynb` vào Kaggle và gắn dataset
+Import `experiments/experiment-cifar-100.ipynb` vào Kaggle và gắn dataset
 [alincijov/cifar-100](https://www.kaggle.com/datasets/alincijov/cifar-100) bằng
 **Add Input**. Dataset cung cấp `train`, `test`, `meta` dưới dạng pickle; notebook
 đọc trực tiếp cả train và test có nhãn, không tải CIFAR từ nguồn khác.
