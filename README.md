@@ -11,6 +11,7 @@ trong package `boundary_unlearning/`, có thể import độc lập sau khi clon
 | `enhanced.py` | Curvature regularization và weight assignment |
 | `training.py` | Train/retrain, checkpoint và đánh giá accuracy |
 | `unlearning.py` | Boundary Shrink và Boundary Expanding |
+| `reporting.py` | Bảng so sánh kết quả trong notebook |
 | `constants.py` | Tên lớp và các hằng số chuẩn hóa |
 
 ## Chạy từ GitHub trên Kaggle
@@ -69,6 +70,6 @@ unlearned_model, stats = run_boundary_shrink(
 
 ## Chạy tại máy local
 
-Cần Python, NumPy, PyTorch và torchvision. Mở notebook từ thư mục gốc repo, để
+Cần Python, NumPy, PyTorch, torchvision, pandas, Jinja2 và IPython. Mở notebook từ thư mục gốc repo, để
 `GITHUB_REPO = ""`, rồi sửa `DATA_ROOT`, `INPUT_ROOT` và `OUTPUT_ROOT` theo máy.
 Các module chỉ định nghĩa hàm/class; import không tải dữ liệu hoặc tự train model.
