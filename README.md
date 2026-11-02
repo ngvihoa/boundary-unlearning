@@ -24,6 +24,7 @@ Thông tin từng thí nghiệm:
 | `training.py` | Train/retrain, checkpoint và đánh giá accuracy |
 | `unlearning.py` | Hai phương pháp gốc và ba biến thể distance weighting/KL |
 | `reporting.py` | Bảng so sánh kết quả trong notebook |
+| `visualization.py` | Accuracy/chi phí, Grad-CAM, entropy và t-SNE cho các model đã có |
 | `artifacts.py` | Thu gom kết quả và tạo file ZIP để tải về |
 | `constants.py` | Tên lớp và các hằng số chuẩn hóa |
 
@@ -60,6 +61,7 @@ Các đầu ra nằm trong `/kaggle/working/result/`:
 ```text
 result/
 ├── checkpoints/              # Original, retrain và các model unlearning
+├── figures/<run_tag>/        # PNG/PDF, cấu hình, dữ liệu dùng để vẽ
 ├── <run_tag>_metrics.csv
 ├── <run_tag>_config.json
 ├── <run_tag>_results.html     # Bảng so sánh kết quả
@@ -103,7 +105,8 @@ unlearned_model, stats = run_boundary_shrink(
 
 ## Chạy tại máy local
 
-Cần Python, NumPy, PyTorch, torchvision, pandas, Jinja2 và IPython. Mở notebook từ thư mục gốc repo, để
+Cần Python, NumPy, PyTorch, torchvision, pandas, Jinja2 và IPython. Phần visualization
+cần thêm Matplotlib; t-SNE cần scikit-learn hỗ trợ tham số `max_iter`. Mở notebook từ thư mục gốc repo, để
 `GITHUB_REPO = ""`, rồi sửa `DATA_ROOT`, `INPUT_ROOT` và `OUTPUT_ROOT` theo máy.
 Các module chỉ định nghĩa hàm/class; import không tải dữ liệu hoặc tự train model.
 
@@ -155,3 +158,24 @@ Tên checkpoint Original/Retrain tiếp tục dùng hash cấu hình baseline c�
 kết quả mới chứa thêm epsilon step và cấu hình KL. Khi tái sử dụng checkpoint,
 bật `REUSE_CHECKPOINTS=True` và kiểm tra đường dẫn được in ra. Checkpoint baseline
 lưu model tốt nhất, khác với model cuối epoch đang nằm trong phiên train trước đó.
+
+## Visualization
+
+Hai notebook có phần **Visualize the seven-model comparison** trước cell export.
+Chạy **Visualization setup** rồi chọn cell vẽ: accuracy/chi phí, Grad-CAM,
+entropy hoặc t-SNE. Các cell dùng model đang có, không train hoặc nạp checkpoint lại.
+Sau khi cập nhật riêng module visualization, chỉ cần reload, chạy lại setup và
+cell vẽ bị ảnh hưởng, rồi export ZIP. Nếu model thay đổi, chạy lại evaluation trước.
+
+- Accuracy: giá trị test retain/forget và chênh lệch so với Retrain theo điểm phần trăm.
+- Chi phí: thời gian giai đoạn/tổng chi phí và số bước stage/student/prerequisite.
+- Grad-CAM: cùng ảnh, cùng lớp mục tiêu; chia tối đa 4 model/trang, hiện prediction
+  confidence và `P(forget)` riêng. Không cập nhật trọng số hay gradient tham số.
+- Entropy: ECDF của log Shannon entropy trên các mẫu train retain, train forget
+  và test, được chọn cố định và dùng chung giữa mọi model.
+- t-SNE: cùng mẫu test, tối đa 1.500 ảnh và 120 ảnh/lớp. CIFAR-100 gom các lớp
+  retain bằng màu xám, lớp forget là vòng đỏ. Có thể bỏ qua cell này để export nhanh.
+
+Hình lưu ở `result/figures/<run_tag>/` dưới dạng PNG/PDF, kèm JSON metadata và NPZ
+chứa CAM/probabilities, entropy hoặc features/embedding để vẽ lại. Cell export cuối
+tự đưa toàn bộ thư mục hình vào ZIP. Xem [hướng dẫn chi tiết](experiments/visualization.md).

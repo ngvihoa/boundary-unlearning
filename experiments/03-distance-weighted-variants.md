@@ -104,6 +104,14 @@ Original đang có cho mọi phương pháp; không trộn model cuối với ch
   rerun distance weighting làm mất hiệu lực Boundary KL phụ thuộc.
 - Kết quả kiểm chứng không thay thế thí nghiệm đầy đủ hoặc đánh giá nhiều seed.
 
+## Visualization sau tích hợp
+
+Hai notebook có thêm [các cell visualization dùng chung](visualization.md) trước
+export: accuracy/chi phí, Grad-CAM, entropy và t-SNE. Dùng đủ 7 model theo
+`METHODS_TO_RUN`, không cập nhật trọng số. Hình và dữ liệu vẽ được lưu ở
+`result/figures/<run_tag>/` và được đưa vào ZIP. Cấu hình train/unlearning ở trên
+không thay đổi.
+
 ```bash
 python -m unittest discover -s tests -v
 ```
