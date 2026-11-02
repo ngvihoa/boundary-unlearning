@@ -1,7 +1,7 @@
 # Boundary Unlearning trên Kaggle
 
 [Notebook CIFAR-10](experiments/boundary-unlearning-cifar-10-experiment.ipynb)
-và [notebook CIFAR-100](experiments/experiment-cifar-100.ipynb) nằm trong `experiments/`.
+và [notebook CIFAR-100](experiments/boundary-unlearning-cifar-100-experiment.ipynb) nằm trong `experiments/`.
 Các hàm và class nằm trong package `boundary_unlearning/`, có thể import độc lập
 sau khi clone repo.
 
@@ -11,16 +11,18 @@ Thông tin từng thí nghiệm:
   và kết quả đã lưu từ lần chạy Kaggle ngày 17/10/2026.
 - [Thí nghiệm 02 — CIFAR-100, quên lớp beaver](experiments/02-cifar-100.md): cấu
   hình dự kiến và trạng thái kiểm chứng, chưa có kết quả train đầy đủ.
+- [Thí nghiệm 03 — Ba biến thể distance weighting/KL](experiments/03-distance-weighted-variants.md):
+  luồng tích hợp vào cả hai notebook, ngân sách cập nhật và cách chạy từng cell.
 
 | File | Nội dung |
 | --- | --- |
 | `data.py` | Đọc NPY/CSV, xử lý nhãn, dataset và DataLoader |
 | `cifar100.py` | Đọc pickle train/test/meta và nhãn fine của CIFAR-100 |
 | `models.py` | AllCNN và khởi tạo classifier |
-| `attacks.py` | FGSM với chuẩn hóa của tác giả |
-| `enhanced.py` | Curvature regularization và weight assignment |
+| `attacks.py` | FGSM của tác giả và tìm epsilon vượt biên theo hướng FGSM |
+| `enhanced.py` | Curvature, probability/distance weighting và retain KL |
 | `training.py` | Train/retrain, checkpoint và đánh giá accuracy |
-| `unlearning.py` | Boundary Shrink và Boundary Expanding |
+| `unlearning.py` | Hai phương pháp gốc và ba biến thể distance weighting/KL |
 | `reporting.py` | Bảng so sánh kết quả trong notebook |
 | `artifacts.py` | Thu gom kết quả và tạo file ZIP để tải về |
 | `constants.py` | Tên lớp và các hằng số chuẩn hóa |
@@ -44,8 +46,10 @@ Thông tin từng thí nghiệm:
    Python import path. Những cell sau import các module `.py`.
 
 `GITHUB_REF` nhận branch, tag hoặc commit SHA. Để lặp lại cùng phiên bản code, dùng
-commit SHA. Khi cập nhật code trên branch hoặc đổi ref, **restart kernel rồi Run All**
-để Python nạp lại module. URL HTTPS trong ví dụ dùng cho repo public.
+commit SHA. URL HTTPS trong ví dụ dùng cho repo public. Với cập nhật nhỏ trong
+phiên đang chạy, dùng cell **Small code update** để fetch/checkout và reload module,
+rồi chạy lại cell định nghĩa runner cùng các cell phương pháp bị ảnh hưởng.
+Không cần chạy lại cell train Original/Retrain khi cấu hình và dữ liệu không đổi.
 
 Notebook vẫn giữ cấu hình mặc định: profile `paper`, train/retrain 30 epoch với LR
 `0.1`, batch 64; unlearning 10 epoch với LR `1e-5`. Train dùng đủ 50.000 ảnh, đánh
@@ -58,7 +62,8 @@ result/
 ├── checkpoints/              # Original, retrain và các model unlearning
 ├── <run_tag>_metrics.csv
 ├── <run_tag>_config.json
-└── <run_tag>_results.html     # Bảng so sánh kết quả
+├── <run_tag>_results.html     # Bảng so sánh kết quả
+└── <run_tag>_unlearning_details.html # Chi phí, số bước, initializer và teacher
 ```
 
 Chạy cell **Export results** ở cuối notebook để tạo
@@ -104,7 +109,7 @@ Các module chỉ định nghĩa hàm/class; import không tải dữ liệu ho�
 
 ## Thí nghiệm CIFAR-100
 
-Import `experiments/experiment-cifar-100.ipynb` vào Kaggle và gắn dataset
+Import `experiments/boundary-unlearning-cifar-100-experiment.ipynb` vào Kaggle và gắn dataset
 [alincijov/cifar-100](https://www.kaggle.com/datasets/alincijov/cifar-100) bằng
 **Add Input**. Dataset cung cấp `train`, `test`, `meta` dưới dạng pickle; notebook
 đọc trực tiếp cả train và test có nhãn, không tải CIFAR từ nguồn khác.
@@ -128,3 +133,25 @@ Kiểm tra loader và nhãn bằng dữ liệu giả lập tại local:
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+## Ba biến thể bổ sung
+
+Cả hai notebook mặc định chạy **5 biến thể unlearning + Original và Retrain**:
+Boundary Shrink, Boundary Expanding, distance weighting, distance weighting + KL
+từ Original và distance weighting + KL từ Boundary Shrink. Mỗi biến thể mới có
+cell riêng; cell cuối đánh giá đủ 7 model và export cùng một CSV/JSON/ZIP.
+
+Biến thể KL từ Boundary Shrink khởi tạo từ model distance weighting, nên student
+được cập nhật tổng cộng **20 epoch**, gồm hai giai đoạn 10 epoch. Bảng chi tiết
+tách thời gian giai đoạn cuối khỏi tổng thời gian tạo cả model đầu vào và teacher.
+Hai biến thể đầu khởi tạo riêng từ Original. Cấu hình train/retrain vẫn giữ nguyên.
+
+Distance search dùng chuẩn hóa đầu vào (`matched`) đúng theo notebook nguồn;
+Boundary Shrink gốc của CIFAR-10 vẫn dùng `repo_exact`. Đây cũng là một khác biệt
+khi diễn giải kết quả, bên cạnh loss và pseudo-label. `EXTRA_EXP="weight_assign"`
+cũ là probability weighting của tác giả, không phải distance weighting mới.
+
+Tên checkpoint Original/Retrain tiếp tục dùng hash cấu hình baseline cũ; hash
+kết quả mới chứa thêm epsilon step và cấu hình KL. Khi tái sử dụng checkpoint,
+bật `REUSE_CHECKPOINTS=True` và kiểm tra đường dẫn được in ra. Checkpoint baseline
+lưu model tốt nhất, khác với model cuối epoch đang nằm trong phiên train trước đó.

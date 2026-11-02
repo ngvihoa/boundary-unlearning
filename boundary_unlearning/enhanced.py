@@ -1,6 +1,9 @@
-"""Optional curvature and reweighting losses from the author."""
+"""Author losses plus distance weighting and retain distillation."""
+
+import math
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 
@@ -46,3 +49,37 @@ def weight_assign(logit, target, bias, slope):
     pm = PM(logit, target)
     reweight = ((pm + bias) * slope).sigmoid().detach()
     return reweight * 3
+
+
+def weight_assign_from_epsilon(epsilons, max_epsilon):
+    """Distance weights from the new notebook, normalized to batch mean one."""
+    if not math.isfinite(max_epsilon) or max_epsilon <= 0:
+        raise ValueError("max_epsilon must be finite and positive")
+    raw = (1 - epsilons / max_epsilon).clamp(min=0.1, max=1.0)
+    return (raw / raw.mean().clamp(min=1e-8)).detach()
+
+
+def retain_distillation_loss(student, teacher, images, *, temperature=2.0):
+    """T² KL(teacher || student); freeze BN only during the retain forward.
+
+    Dropout retains the student's training mode, matching the source notebook.
+    Restore each BN mode afterwards so the next forget forward can update it.
+    """
+    if not math.isfinite(temperature) or temperature <= 0:
+        raise ValueError("temperature must be finite and positive")
+    with torch.no_grad():
+        teacher_logits = teacher(images)
+    bn_modes = [(m, m.training) for m in student.modules()
+                if isinstance(m, nn.modules.batchnorm._BatchNorm)]
+    try:
+        for module, _ in bn_modes:
+            module.eval()
+        student_logits = student(images)
+    finally:
+        for module, training in bn_modes:
+            module.train(training)
+    return F.kl_div(
+        F.log_softmax(student_logits / temperature, dim=1),
+        F.softmax(teacher_logits / temperature, dim=1),
+        reduction="batchmean",
+    ) * temperature ** 2

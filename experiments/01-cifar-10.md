@@ -8,6 +8,10 @@
 - Commit được cell bootstrap in ra: `e8d90cdf1eb3103838b99d0d18ac5cfd84c6604c`.
 - Ghi chú được lập từ source và output đã lưu trong notebook; không chạy lại thí nghiệm.
   Notebook không ghi riêng SHA của những lần cập nhật module giữa phiên.
+- Notebook hiện đã tích hợp [ba biến thể bổ sung](03-distance-weighted-variants.md).
+  Các số liệu bên dưới là snapshot của lần chạy cũ với hai phương pháp gốc;
+  chưa phải kết quả của flow mở rộng. Output ở các cell đã sửa được xóa để tránh
+  gắn kết quả cũ vào source mới.
 
 ## Mục tiêu và dữ liệu
 
