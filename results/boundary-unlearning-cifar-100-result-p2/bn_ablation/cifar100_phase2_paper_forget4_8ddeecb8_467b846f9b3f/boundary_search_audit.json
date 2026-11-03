@@ -1,0 +1,18 @@
+{
+  "samples": 500,
+  "epsilon_mean": 0.0037411765661090612,
+  "epsilon_min": 0.0,
+  "epsilon_max": 0.003921568859368563,
+  "epsilon_std": 0.0008215102134272456,
+  "weight_mean": 1.0000001192092896,
+  "weight_min": 0.9974555373191833,
+  "weight_max": 1.0401530265808105,
+  "weight_std": 0.00851407554000616,
+  "already_wrong_fraction": 0.046,
+  "first_step_fraction": 0.954,
+  "cross_fraction": 1.0,
+  "normalization": "matched",
+  "bound": 0.1,
+  "epsilon_step": 0.00392156862745098,
+  "scope": "one seed-shuffled teacher-only pass; not Shrink training pseudo-labels"
+}

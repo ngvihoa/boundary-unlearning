@@ -1,0 +1,5 @@
+model,test_all_acc,test_retain_acc,test_forget_acc,train_retain_acc,train_forget_acc,training_seconds,unlearning_seconds,fgsm_cross_rate,unlearning_update_steps,bn_stats_mode,weighting_mode,mean_sample_weight,mean_boundary_epsilon,mean_forget_ce,mean_retain_kl,mean_scaled_retain_kl,mean_total_loss,bn_running_mean_max_change,bn_running_var_max_change,bn_batches_min_change,bn_batches_max_change
+original,0.5238,0.5264646464646464,0.26,0.953010101010101,0.954,424.767755745,,,,,,,,,,,,,,,
+retrain,0.5175,0.5227272727272727,0.0,0.9562020202020202,0.0,424.5325448399999,,,,,,,,,,,,,,,
+boundary_shrink_weight_assign_bn_freeze,0.5134,0.517979797979798,0.06,0.9395959595959597,0.506,,3.467554721000056,1.0,80,freeze,distance,1.0000000244140625,0.003741176724433899,3.2124669038772584,0.0,0.0,3.2124669038772584,0.0,0.0,0,0
+boundary_shrink_weight_assign_uniform_bn_freeze,0.5134,0.517979797979798,0.06,0.9395151515151515,0.504,,3.4866909240000723,1.0,80,freeze,uniform,1.0,0.003741176724433899,3.21571658782959,0.0,0.0,3.21571658782959,0.0,0.0,0,0

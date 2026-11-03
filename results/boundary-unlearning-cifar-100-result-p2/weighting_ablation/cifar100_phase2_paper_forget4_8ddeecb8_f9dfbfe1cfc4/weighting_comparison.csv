@@ -1,0 +1,2 @@
+model,reference,test_retain_delta_pp,test_forget_delta_pp,train_retain_delta_pp,train_forget_delta_pp,mean_forget_ce_delta
+boundary_shrink_weight_assign_uniform_bn_freeze,boundary_shrink_weight_assign_bn_freeze,0.0,0.0,-0.008080808080812574,-0.20000000000000018,0.0032496839523314947

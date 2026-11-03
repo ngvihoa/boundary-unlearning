@@ -1,0 +1,96 @@
+<style type="text/css">
+#T_94941_row0_col0, #T_94941_row0_col1, #T_94941_row0_col2, #T_94941_row0_col3, #T_94941_row0_col4, #T_94941_row0_col5, #T_94941_row0_col6, #T_94941_row0_col7, #T_94941_row0_col8, #T_94941_row1_col0, #T_94941_row1_col1, #T_94941_row1_col2, #T_94941_row1_col3, #T_94941_row1_col4, #T_94941_row1_col5, #T_94941_row1_col6, #T_94941_row1_col7, #T_94941_row1_col8, #T_94941_row2_col0, #T_94941_row2_col1, #T_94941_row2_col2, #T_94941_row2_col3, #T_94941_row2_col4, #T_94941_row2_col5, #T_94941_row2_col6, #T_94941_row2_col7, #T_94941_row2_col8, #T_94941_row3_col0, #T_94941_row3_col1, #T_94941_row3_col2, #T_94941_row3_col3, #T_94941_row3_col4, #T_94941_row3_col5, #T_94941_row3_col6, #T_94941_row3_col7, #T_94941_row3_col8, #T_94941_row4_col0, #T_94941_row4_col1, #T_94941_row4_col2, #T_94941_row4_col3, #T_94941_row4_col4, #T_94941_row4_col5, #T_94941_row4_col6, #T_94941_row4_col7, #T_94941_row4_col8 {
+  text-align: right;
+}
+</style>
+<table id="T_94941">
+  <caption>Unlearning cost · excludes Original training; includes both prerequisite models</caption>
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_94941_level0_col0" class="col_heading level0 col0" >Stage (s)</th>
+      <th id="T_94941_level0_col1" class="col_heading level0 col1" >With prerequisites (s)</th>
+      <th id="T_94941_level0_col2" class="col_heading level0 col2" >Stage updates</th>
+      <th id="T_94941_level0_col3" class="col_heading level0 col3" >Student updates</th>
+      <th id="T_94941_level0_col4" class="col_heading level0 col4" >With prerequisites updates</th>
+      <th id="T_94941_level0_col5" class="col_heading level0 col5" >Mean epsilon</th>
+      <th id="T_94941_level0_col6" class="col_heading level0 col6" >Mean weight</th>
+      <th id="T_94941_level0_col7" class="col_heading level0 col7" >Student starts from</th>
+      <th id="T_94941_level0_col8" class="col_heading level0 col8" >Retain teacher</th>
+    </tr>
+    <tr>
+      <th class="index_name level0" >Method</th>
+      <th class="blank col0" >&nbsp;</th>
+      <th class="blank col1" >&nbsp;</th>
+      <th class="blank col2" >&nbsp;</th>
+      <th class="blank col3" >&nbsp;</th>
+      <th class="blank col4" >&nbsp;</th>
+      <th class="blank col5" >&nbsp;</th>
+      <th class="blank col6" >&nbsp;</th>
+      <th class="blank col7" >&nbsp;</th>
+      <th class="blank col8" >&nbsp;</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_94941_level0_row0" class="row_heading level0 row0" >Boundary Shrink</th>
+      <td id="T_94941_row0_col0" class="data row0 col0" >3.18</td>
+      <td id="T_94941_row0_col1" class="data row0 col1" >3.18</td>
+      <td id="T_94941_row0_col2" class="data row0 col2" >80</td>
+      <td id="T_94941_row0_col3" class="data row0 col3" >80</td>
+      <td id="T_94941_row0_col4" class="data row0 col4" >80</td>
+      <td id="T_94941_row0_col5" class="data row0 col5" >—</td>
+      <td id="T_94941_row0_col6" class="data row0 col6" >—</td>
+      <td id="T_94941_row0_col7" class="data row0 col7" >Original</td>
+      <td id="T_94941_row0_col8" class="data row0 col8" >—</td>
+    </tr>
+    <tr>
+      <th id="T_94941_level0_row1" class="row_heading level0 row1" >Boundary Expanding</th>
+      <td id="T_94941_row1_col0" class="data row1 col0" >1.44</td>
+      <td id="T_94941_row1_col1" class="data row1 col1" >1.44</td>
+      <td id="T_94941_row1_col2" class="data row1 col2" >80</td>
+      <td id="T_94941_row1_col3" class="data row1 col3" >80</td>
+      <td id="T_94941_row1_col4" class="data row1 col4" >80</td>
+      <td id="T_94941_row1_col5" class="data row1 col5" >—</td>
+      <td id="T_94941_row1_col6" class="data row1 col6" >—</td>
+      <td id="T_94941_row1_col7" class="data row1 col7" >Original</td>
+      <td id="T_94941_row1_col8" class="data row1 col8" >—</td>
+    </tr>
+    <tr>
+      <th id="T_94941_level0_row2" class="row_heading level0 row2" >Shrink + distance weights</th>
+      <td id="T_94941_row2_col0" class="data row2 col0" >14.19</td>
+      <td id="T_94941_row2_col1" class="data row2 col1" >14.19</td>
+      <td id="T_94941_row2_col2" class="data row2 col2" >80</td>
+      <td id="T_94941_row2_col3" class="data row2 col3" >80</td>
+      <td id="T_94941_row2_col4" class="data row2 col4" >80</td>
+      <td id="T_94941_row2_col5" class="data row2 col5" >0.00374</td>
+      <td id="T_94941_row2_col6" class="data row2 col6" >1.000</td>
+      <td id="T_94941_row2_col7" class="data row2 col7" >Original</td>
+      <td id="T_94941_row2_col8" class="data row2 col8" >—</td>
+    </tr>
+    <tr>
+      <th id="T_94941_level0_row3" class="row_heading level0 row3" >Distance + KL (Original)</th>
+      <td id="T_94941_row3_col0" class="data row3 col0" >4.46</td>
+      <td id="T_94941_row3_col1" class="data row3 col1" >4.46</td>
+      <td id="T_94941_row3_col2" class="data row3 col2" >80</td>
+      <td id="T_94941_row3_col3" class="data row3 col3" >80</td>
+      <td id="T_94941_row3_col4" class="data row3 col4" >80</td>
+      <td id="T_94941_row3_col5" class="data row3 col5" >0.00374</td>
+      <td id="T_94941_row3_col6" class="data row3 col6" >1.000</td>
+      <td id="T_94941_row3_col7" class="data row3 col7" >Original</td>
+      <td id="T_94941_row3_col8" class="data row3 col8" >Original</td>
+    </tr>
+    <tr>
+      <th id="T_94941_level0_row4" class="row_heading level0 row4" >Distance + KL (Shrink, warm start)</th>
+      <td id="T_94941_row4_col0" class="data row4 col0" >4.44</td>
+      <td id="T_94941_row4_col1" class="data row4 col1" >21.81</td>
+      <td id="T_94941_row4_col2" class="data row4 col2" >80</td>
+      <td id="T_94941_row4_col3" class="data row4 col3" >160</td>
+      <td id="T_94941_row4_col4" class="data row4 col4" >240</td>
+      <td id="T_94941_row4_col5" class="data row4 col5" >0.00374</td>
+      <td id="T_94941_row4_col6" class="data row4 col6" >1.000</td>
+      <td id="T_94941_row4_col7" class="data row4 col7" >Shrink + distance weights</td>
+      <td id="T_94941_row4_col8" class="data row4 col8" >Boundary Shrink</td>
+    </tr>
+  </tbody>
+</table>
