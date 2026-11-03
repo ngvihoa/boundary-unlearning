@@ -1,9 +1,12 @@
 """Boundary Shrink, Boundary Expanding and distance-weighted extensions."""
 
 import copy
+import csv
 import math
+from pathlib import Path
 import time
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -22,6 +25,44 @@ ORIGINAL_KL_METHOD = "boundary_shrink_weight_assign_distill"
 BOUNDARY_KL_METHOD = "boundary_shrink_weight_assign_boundary_distill"
 DISTANCE_METHODS = (DISTANCE_METHOD, ORIGINAL_KL_METHOD, BOUNDARY_KL_METHOD)
 SUPPORTED_METHODS = ("boundary_shrink", "boundary_expanding", *DISTANCE_METHODS)
+
+
+def _validate_bn_mode(mode):
+    if mode not in {"update", "freeze"}:
+        raise ValueError("bn_stats_mode must be 'update' or 'freeze'")
+
+
+def _student_train_mode(model, bn_stats_mode):
+    # Only freeze running statistics; BN affine parameters still receive gradients.
+    model.train()
+    if bn_stats_mode == "freeze":
+        for module in model.modules():
+            if isinstance(module, nn.modules.batchnorm._BatchNorm):
+                module.eval()
+
+
+def _save_diagnostics(directory, history, samples=None):
+    if directory is None:
+        return {}
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    loss_path = directory / "losses.csv"
+    fields = ("epoch", "step", "batch_size", "forget_ce", "retain_kl",
+              "scaled_retain_kl", "total_loss")
+    with loss_path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(history)
+    result = {"losses_path": str(loss_path)}
+    if samples and samples["epsilon"]:
+        sample_path = directory / "boundary_samples.npz"
+        np.savez_compressed(sample_path, **{key: np.concatenate(value) for key, value in samples.items()})
+        result["boundary_samples_path"] = str(sample_path)
+    if history:
+        total = sum(row["batch_size"] for row in history)
+        for key in fields[3:]:
+            result[f"mean_{key}"] = sum(row[key] * row["batch_size"] for row in history) / total
+    return result
 
 
 def validate_methods(methods, *, extra_exp=None):
@@ -43,7 +84,8 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
                           momentum=0.9, pin_memory=False,
                           max_batches_per_epoch=None, bound=0.1,
                           epsilon_step=1 / 255, kl_lambda=0.1, temperature=2.0,
-                          cifar_mean=CIFAR_MEAN, cifar_std=CIFAR_STD):
+                          cifar_mean=CIFAR_MEAN, cifar_std=CIFAR_STD,
+                          bn_stats_mode="update", diagnostics_dir=None):
     """Run one of the three distance-weighted variants in no-refactor-new.
 
     The Original-KL student starts from Original. Boundary-KL starts from the
@@ -51,7 +93,10 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
     All pseudo-labels come from Original. Existing model objects are never changed.
     Timing excludes checkpoint writing; totals include both prerequisite stages
     for Boundary-KL, but exclude Original training for every method.
+    bn_stats_mode='freeze' uses stored BN statistics on forget forwards while
+    keeping affine parameters trainable. Optional diagnostics log each update.
     """
+    _validate_bn_mode(bn_stats_mode)
     if method not in DISTANCE_METHODS:
         raise ValueError(f"Unsupported distance method: {method}")
     if not math.isfinite(bound) or bound <= 0 or not math.isfinite(epsilon_step) or epsilon_step <= 0:
@@ -78,6 +123,8 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
     retain_iterator = iter(retain_loader) if distill else None
     seen = crossed = steps = 0
     weight_sum = epsilon_sum = 0.0
+    history = []
+    samples = {key: [] for key in ("epsilon", "weight", "label", "pseudo_label", "epoch")}
 
     for epoch in range(epochs):
         for batch_index, (images, labels) in enumerate(forget_loader):
@@ -90,10 +137,12 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
                 epsilon_step=epsilon_step, cifar_mean=cifar_mean, cifar_std=cifar_std,
             )
             weights = weight_assign_from_epsilon(epsilons, bound)
-            student.train()
+            _student_train_mode(student, bn_stats_mode)
             optimizer.zero_grad(set_to_none=True)
             logits = student(images)
             loss = (F.cross_entropy(logits, targets, reduction="none") * weights).mean()
+            forget_ce = loss
+            retain_kl = logits.new_zeros(())
             if distill:
                 try:
                     retain_images, _ = next(retain_iterator)
@@ -101,9 +150,10 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
                     retain_iterator = iter(retain_loader)
                     retain_images, _ = next(retain_iterator)
                 retain_images = retain_images.to(device, non_blocking=pin_memory)
-                loss = loss + kl_lambda * retain_distillation_loss(
+                retain_kl = retain_distillation_loss(
                     student, retain_teacher, retain_images, temperature=temperature,
                 )
+                loss = loss + kl_lambda * retain_kl
             loss.backward()
             optimizer.step()
             steps += 1
@@ -111,6 +161,14 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
             crossed += targets.ne(labels).sum().item()
             weight_sum += weights.sum().item()
             epsilon_sum += epsilons.sum().item()
+            if diagnostics_dir is not None:
+                history.append({"epoch": epoch + 1, "step": steps, "batch_size": labels.numel(),
+                                "forget_ce": forget_ce.detach().item(), "retain_kl": retain_kl.detach().item(),
+                                "scaled_retain_kl": kl_lambda * retain_kl.detach().item(),
+                                "total_loss": loss.detach().item()})
+                for key, value in (("epsilon", epsilons), ("weight", weights), ("label", labels),
+                                   ("pseudo_label", targets), ("epoch", torch.full_like(labels, epoch + 1))):
+                    samples[key].append(value.detach().cpu().numpy())
         print(f"[{method}] Epoch {epoch + 1}/{epochs}")
 
     sync_if_cuda(device)
@@ -144,7 +202,9 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
         "normalization_mode": "matched",
         "retain_kl_lambda": kl_lambda if distill else 0.0,
         "retain_kl_temperature": temperature if distill else None,
+        "bn_stats_mode": bn_stats_mode,
     }
+    stats.update(_save_diagnostics(diagnostics_dir, history, samples))
     print(f"[{method}] Stage: {elapsed:.2f}s | Updates: {steps} | Checkpoint: {checkpoint_path}")
     return student, stats
 
@@ -159,7 +219,10 @@ def run_boundary_shrink(original, forget_loader, checkpoint_path, *, device,
                         bound=0.1, normalization_mode="repo_exact", extra_exp=None,
                         curvature_lambda=0.7, reweight_bias=-0.5, reweight_slope=5.0,
                         cifar_mean=CIFAR_MEAN, cifar_std=CIFAR_STD,
-                        attack_mean=REPO_ATTACK_MEAN, attack_std=REPO_ATTACK_STD):
+                        attack_mean=REPO_ATTACK_MEAN, attack_std=REPO_ATTACK_STD,
+                        bn_stats_mode="update", diagnostics_dir=None):
+    """Plain/author-enhanced Shrink; optionally use frozen BN running statistics."""
+    _validate_bn_mode(bn_stats_mode)
     sync_if_cuda(device)
     start = time.perf_counter()
     teacher = copy.deepcopy(original).to(device)
@@ -172,6 +235,7 @@ def run_boundary_shrink(original, forget_loader, checkpoint_path, *, device,
     crossed = 0
     seen = 0
     update_steps = 0
+    history = []
 
     for epoch in range(epochs):
         for batch_index, (x, y) in enumerate(forget_loader):
@@ -192,7 +256,7 @@ def run_boundary_shrink(original, forget_loader, checkpoint_path, *, device,
             crossed += (pseudo_label != y).sum().item()
             seen += y.numel()
 
-            unlearned.train()
+            _student_train_mode(unlearned, bn_stats_mode)
             optimizer.zero_grad(set_to_none=True)
             logits = unlearned(x)
             ori_loss = criterion(logits, pseudo_label)
@@ -208,6 +272,10 @@ def run_boundary_shrink(original, forget_loader, checkpoint_path, *, device,
             loss.backward()
             optimizer.step()
             update_steps += 1
+            if diagnostics_dir is not None:
+                history.append({"epoch": epoch + 1, "step": update_steps, "batch_size": y.numel(),
+                                "forget_ce": ori_loss.detach().item(), "retain_kl": 0.0,
+                                "scaled_retain_kl": 0.0, "total_loss": loss.detach().item()})
 
         print(f"[boundary_shrink] Epoch {epoch + 1}/{epochs}")
 
@@ -219,7 +287,9 @@ def run_boundary_shrink(original, forget_loader, checkpoint_path, *, device,
         "cross_rate": crossed / seen if seen else float("nan"),
         "update_steps": update_steps,
         "sample_seen": seen,
+        "bn_stats_mode": bn_stats_mode,
     }
+    stats.update(_save_diagnostics(diagnostics_dir, history))
     print(f"[boundary_shrink] Training time: {elapsed:.2f}s")
     print(f"[boundary_shrink] Boundary crossing rate: {stats['cross_rate']:.4f}")
     print(f"[boundary_shrink] Update steps: {update_steps}")

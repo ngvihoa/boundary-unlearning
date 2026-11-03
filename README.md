@@ -13,6 +13,8 @@ Thông tin từng thí nghiệm:
   hình dự kiến và trạng thái kiểm chứng, chưa có kết quả train đầy đủ.
 - [Thí nghiệm 03 — Ba biến thể distance weighting/KL](experiments/03-distance-weighted-variants.md):
   luồng tích hợp vào cả hai notebook, ngân sách cập nhật và cách chạy từng cell.
+- [Thí nghiệm 04 — BatchNorm ablation CIFAR-100](experiments/04-cifar100-batchnorm-ablation.md):
+  chạy cặp Shrink update/freeze từ cùng Original, không train lại baseline.
 
 | File | Nội dung |
 | --- | --- |
@@ -25,6 +27,7 @@ Thông tin từng thí nghiệm:
 | `unlearning.py` | Hai phương pháp gốc và ba biến thể distance weighting/KL |
 | `reporting.py` | Bảng so sánh kết quả trong notebook |
 | `visualization.py` | Accuracy/chi phí, Grad-CAM, entropy và t-SNE cho các model đã có |
+| `diagnostics.py` | Đối chứng BatchNorm, loss và audit epsilon/weight từ model đang có |
 | `artifacts.py` | Thu gom kết quả và tạo file ZIP để tải về |
 | `constants.py` | Tên lớp và các hằng số chuẩn hóa |
 
@@ -179,3 +182,20 @@ cell vẽ bị ảnh hưởng, rồi export ZIP. Nếu model thay đổi, chạy
 Hình lưu ở `result/figures/<run_tag>/` dưới dạng PNG/PDF, kèm JSON metadata và NPZ
 chứa CAM/probabilities, entropy hoặc features/embedding để vẽ lại. Cell export cuối
 tự đưa toàn bộ thư mục hình vào ZIP. Xem [hướng dẫn chi tiết](experiments/visualization.md).
+
+## Kiểm tra BatchNorm trên CIFAR-100
+
+Sau khi cập nhật code trong phiên Kaggle đã có Original/Retrain, bật
+`RUN_BN_ABLATION=True` ở cell **Optional: paired BatchNorm ablation**, rồi chạy riêng
+cell đó. Mặc định chỉ chạy Boundary Shrink với BN update/freeze, giữ nguyên epoch/LR
+và batch size, lưu kết quả trong `result/bn_ablation/` và tạo ZIP ngay.
+
+Nếu notebook Kaggle chưa có cell mới, có thể gọi trực tiếp sau khi fetch code:
+
+```python
+exec((Path(CODE_ROOT) / "experiments" / "run-bn-ablation.py").read_text())
+```
+
+Mặc định của các hàm unlearning vẫn là `bn_stats_mode="update"`. Cặp đối chứng
+ghi riêng checkpoint và metrics; các kết quả 7 model hiện tại được giữ nguyên.
+Xem [thiết kế, log và cách đọc kết quả](experiments/04-cifar100-batchnorm-ablation.md).

@@ -12,6 +12,9 @@ MODEL_NAMES = {
     "boundary_shrink_weight_assign_distill": "Distance + KL (Original)",
     "boundary_shrink_weight_assign_boundary_distill": "Distance + KL (Shrink, warm start)",
 }
+for _method in ("boundary_shrink", "boundary_shrink_weight_assign", "boundary_shrink_weight_assign_distill"):
+    for _mode in ("update", "freeze"):
+        MODEL_NAMES[f"{_method}_bn_{_mode}"] = f"{MODEL_NAMES[_method]} · BN {_mode}"
 
 
 def results_table(rows, *, dataset_name="CIFAR-10"):
