@@ -158,7 +158,10 @@ class ExperimentPhaseTests(unittest.TestCase):
                     code = code.replace('MAX_BATCHES_PER_EPOCH = 3', 'MAX_BATCHES_PER_EPOCH = 1')
                     code = code.replace('EVALUATE_TRAIN_SPLITS = False', 'EVALUATE_TRAIN_SPLITS = True')
                 else:
-                    code = code.replace('PHASE1_SOURCE = None', f'PHASE1_SOURCE = Path({str(source)!r})')
+                    code = code.replace(
+                        'PHASE1_SOURCE = Path(CODE_ROOT) / "results" / "boundary-unlearning-cifar-100-result"',
+                        f'PHASE1_SOURCE = Path({str(source)!r})',
+                    )
                 plotted_models = namespace.get('visualization_models', {}) if code.startswith('# VISUALIZATION:') else {}
                 before = {
                     name: {

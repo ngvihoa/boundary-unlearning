@@ -161,10 +161,18 @@ result/phase1/<run_tag>/
     └── boundary_expanding_evaluated.pt
 ```
 
-Sau đó import notebook **Phase 2**, gắn lại CIFAR-100 và gắn Output đã lưu của
-notebook Phase 1, hoặc upload `result.zip` thành Kaggle Dataset rồi **Add Input**.
-`PHASE1_SOURCE=None` tự tìm một gói duy nhất; nếu có nhiều gói, điền đường dẫn ZIP,
-thư mục chứa một manifest hoặc chính file `phase1_manifest.json` cần sử dụng.
+Sau đó import notebook **Phase 2** và gắn lại CIFAR-100. Mặc định notebook nạp
+bundle 30 epoch train / 10 epoch unlearning đã lưu trong repo, sau cell clone/update:
+
+```python
+PHASE1_SOURCE = Path(CODE_ROOT) / "results" / "boundary-unlearning-cifar-100-result"
+```
+
+`GITHUB_REF` phải chứa thư mục này; không cần upload kết quả thành Kaggle Dataset riêng.
+Nếu muốn dùng Output đã lưu của Phase 1 hoặc `result.zip` upload thành Kaggle Dataset,
+hãy **Add Input** rồi đặt `PHASE1_SOURCE` thành đường dẫn ZIP, thư mục chứa một manifest
+hoặc chính file `phase1_manifest.json`. `PHASE1_SOURCE=None` chỉ tự tìm một gói duy nhất
+trong `/kaggle/input`, không tìm trong repo đã clone.
 Phase 2 kiểm tra SHA-256, khôi phục cả model Expanding đã prune, xác nhận dữ liệu
 và dùng lại cấu hình Phase 1. Thiếu/sai gói sẽ báo lỗi, không tự train baseline.
 Các bản tham chiếu được sao chép vào `result/phase1_source/` để export Phase 2 tự đủ.
