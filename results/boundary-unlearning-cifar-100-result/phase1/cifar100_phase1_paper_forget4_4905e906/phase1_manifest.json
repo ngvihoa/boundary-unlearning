@@ -1,0 +1,41 @@
+{
+  "format": "boundary_unlearning.cifar100.phase1.v1",
+  "run_tag": "cifar100_phase1_paper_forget4_4905e906",
+  "checkpoint_selection": "exact_evaluated_in_memory_state",
+  "files": {
+    "config": {
+      "path": "config.json",
+      "sha256": "a50b08c0986ad9144e2bcd3cb99bde93ea4f936c5cc9894b1ef12806639f9c8f"
+    },
+    "rows": {
+      "path": "rows.json",
+      "sha256": "de4d94db7ae5df8aa5fb6210a01569faf52464e53e23633e7a3ed39827fcd08e"
+    },
+    "metrics": {
+      "path": "metrics.csv",
+      "sha256": "ece973ef65b9e65f6c6f6713a32fd27310533f244aacce43bbf8a80af80e8283"
+    },
+    "results": {
+      "path": "results.html",
+      "sha256": "06a63173a0730d3247c0076cddfc3d0aad9d72174800451d049b87230aeae976"
+    }
+  },
+  "models": {
+    "original": {
+      "path": "checkpoints/original_evaluated.pt",
+      "sha256": "dcf98b097e9ba30395081047583609e4223efaaa4e1199d02af64f2f56579a17"
+    },
+    "retrain": {
+      "path": "checkpoints/retrain_evaluated.pt",
+      "sha256": "6d6fdb786c4df656e17ac1a78854bd8c9b9ec7adbec1c98bcc70480b0678f68a"
+    },
+    "boundary_shrink": {
+      "path": "checkpoints/boundary_shrink_evaluated.pt",
+      "sha256": "ae8be6198049f649928ec6fa64706addacee051f84b3a4f234392009d759933c"
+    },
+    "boundary_expanding": {
+      "path": "checkpoints/boundary_expanding_evaluated.pt",
+      "sha256": "105d1581321c8465377740e24180032bc50e66da6e77d5ddbc165829551535ab"
+    }
+  }
+}

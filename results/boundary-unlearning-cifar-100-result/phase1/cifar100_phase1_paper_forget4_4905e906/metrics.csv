@@ -1,0 +1,5 @@
+model,test_all_acc,test_retain_acc,test_forget_acc,train_retain_acc,train_forget_acc,training_seconds,unlearning_seconds,fgsm_cross_rate,unlearning_update_steps,total_unlearning_seconds,student_update_steps,total_update_steps,mean_sample_weight,mean_boundary_epsilon,initializer,retain_teacher
+original,0.5238,0.5264646464646464,0.26,0.953010101010101,0.954,424.767755745,,,,,,,,,,
+retrain,0.5175,0.5227272727272727,0.0,0.9562020202020202,0.0,424.5325448399999,,,,,,,,,,
+boundary_shrink,0.4299,0.43424242424242426,0.0,0.7298181818181818,0.0,,3.177877562000049,1.0,80,3.177877562000049,80,80,,,original,
+boundary_expanding,0.4296,0.43393939393939396,0.0,0.7295959595959596,0.0,,1.4438344190000407,,80,1.4438344190000407,80,80,,,original,
