@@ -85,7 +85,8 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
                           max_batches_per_epoch=None, bound=0.1,
                           epsilon_step=1 / 255, kl_lambda=0.1, temperature=2.0,
                           cifar_mean=CIFAR_MEAN, cifar_std=CIFAR_STD,
-                          bn_stats_mode="update", diagnostics_dir=None):
+                          bn_stats_mode="update", diagnostics_dir=None,
+                          weighting_mode="distance"):
     """Run one of the three distance-weighted variants in no-refactor-new.
 
     The Original-KL student starts from Original. Boundary-KL starts from the
@@ -95,8 +96,11 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
     for Boundary-KL, but exclude Original training for every method.
     bn_stats_mode='freeze' uses stored BN statistics on forget forwards while
     keeping affine parameters trainable. Optional diagnostics log each update.
+    weighting_mode='uniform' preserves boundary search/targets but uses weights=1.
     """
     _validate_bn_mode(bn_stats_mode)
+    if weighting_mode not in {"distance", "uniform"}:
+        raise ValueError("weighting_mode must be 'distance' or 'uniform'")
     if method not in DISTANCE_METHODS:
         raise ValueError(f"Unsupported distance method: {method}")
     if not math.isfinite(bound) or bound <= 0 or not math.isfinite(epsilon_step) or epsilon_step <= 0:
@@ -136,7 +140,8 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
                 images, labels, pseudo_teacher, bound=bound,
                 epsilon_step=epsilon_step, cifar_mean=cifar_mean, cifar_std=cifar_std,
             )
-            weights = weight_assign_from_epsilon(epsilons, bound)
+            weights = (weight_assign_from_epsilon(epsilons, bound) if weighting_mode == "distance"
+                       else torch.ones_like(epsilons))
             _student_train_mode(student, bn_stats_mode)
             optimizer.zero_grad(set_to_none=True)
             logits = student(images)
@@ -203,6 +208,7 @@ def run_boundary_distance(original, forget_loader, checkpoint_path, *, device,
         "retain_kl_lambda": kl_lambda if distill else 0.0,
         "retain_kl_temperature": temperature if distill else None,
         "bn_stats_mode": bn_stats_mode,
+        "weighting_mode": weighting_mode,
     }
     stats.update(_save_diagnostics(diagnostics_dir, history, samples))
     print(f"[{method}] Stage: {elapsed:.2f}s | Updates: {steps} | Checkpoint: {checkpoint_path}")

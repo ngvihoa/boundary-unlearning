@@ -15,6 +15,8 @@ Thông tin từng thí nghiệm:
   luồng tích hợp vào cả hai notebook, ngân sách cập nhật và cách chạy từng cell.
 - [Thí nghiệm 04 — BatchNorm ablation CIFAR-100](experiments/04-cifar100-batchnorm-ablation.md):
   chạy cặp Shrink update/freeze từ cùng Original, không train lại baseline.
+- [Thí nghiệm 05 — Distance weights so với weights = 1](experiments/05-cifar100-weighting-ablation.md):
+  cùng distance pseudo-label, BN freeze và initializer; chỉ thay sample weights.
 
 | File | Nội dung |
 | --- | --- |
@@ -199,3 +201,18 @@ exec((Path(CODE_ROOT) / "experiments" / "run-bn-ablation.py").read_text())
 Mặc định của các hàm unlearning vẫn là `bn_stats_mode="update"`. Cặp đối chứng
 ghi riêng checkpoint và metrics; các kết quả 7 model hiện tại được giữ nguyên.
 Xem [thiết kế, log và cách đọc kết quả](experiments/04-cifar100-batchnorm-ablation.md).
+
+## Đối chứng riêng distance weighting
+
+Sau khi cập nhật code, chạy một cell trong phiên đã có Original/Retrain:
+
+```python
+from pathlib import Path
+exec((Path(CODE_ROOT) / "experiments" / "run-weighting-ablation.py").read_text())
+```
+
+Chạy hai student với cùng distance search, seed, cấu hình unlearning và BN freeze,
+so sánh distance weights với weights luôn bằng 1, không dùng retain KL.
+Entry tự kiểm tra pseudo-label/epsilon của cặp, đánh giá và export ZIP; không cần
+Run All. Đầu ra riêng ở `result/weighting_ablation/`, biến `weighting_ablation`.
+Xem [thiết kế và cách đọc chênh lệch](experiments/05-cifar100-weighting-ablation.md).

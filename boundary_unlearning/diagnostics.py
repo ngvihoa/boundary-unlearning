@@ -1,4 +1,4 @@
-"""Paired BN-statistics ablations using existing Original/Retrain models."""
+"""Paired BN-statistics and sample-weighting ablations using existing baselines."""
 
 from contextlib import contextmanager
 import copy
@@ -162,7 +162,8 @@ def run_batchnorm_ablation(original, retrain, forget_loader_factory, evaluate_mo
                            kl_lambda=0.1, temperature=2.0, cifar_mean=CIFAR_MEAN, cifar_std=CIFAR_STD,
                            attack_mean=REPO_ATTACK_MEAN, attack_std=REPO_ATTACK_STD,
                            dataset_name="CIFAR-100", metadata=None, baseline_training_seconds=None,
-                           audit_search=True, plots=True):
+                           audit_search=True, plots=True, bn_modes=("update", "freeze"),
+                           weighting_modes=("distance",), experiment_name="bn_ablation"):
     """Run update/freeze pairs from the exact same provided Original model.
 
     Factories must return a NEW seed-controlled loader on every call. Defaults
@@ -171,6 +172,14 @@ def run_batchnorm_ablation(original, retrain, forget_loader_factory, evaluate_mo
     Existing Original/Retrain and main-flow result dictionaries are untouched.
     """
     allowed = {"boundary_shrink", DISTANCE_METHOD, ORIGINAL_KL_METHOD}
+    if not bn_modes or len(set(bn_modes)) != len(bn_modes) or set(bn_modes) - {"update", "freeze"}:
+        raise ValueError("Choose unique update/freeze BN modes")
+    if not weighting_modes or len(set(weighting_modes)) != len(weighting_modes) or set(weighting_modes) - {"distance", "uniform"}:
+        raise ValueError("Choose unique distance/uniform weighting modes")
+    if "uniform" in weighting_modes and "boundary_shrink" in methods:
+        raise ValueError("Uniform weighting control requires distance pseudo-label methods")
+    if experiment_name not in {"bn_ablation", "weighting_ablation"}:
+        raise ValueError("Unsupported experiment_name")
     if not methods or len(set(methods)) != len(methods) or set(methods) - allowed:
         raise ValueError("Choose unique plain Shrink, distance, or Original-KL methods")
     if epochs < 1 or (max_batches_per_epoch is not None and max_batches_per_epoch < 1):
@@ -188,7 +197,7 @@ def run_batchnorm_ablation(original, retrain, forget_loader_factory, evaluate_mo
         raise ValueError("source_run_tag must be a filename component")
     settings = {
         "implementation": "bn_statistics_ablation_v1", "source_run_tag": source_run_tag,
-        "dataset": dataset_name, "seed": seed, "methods": list(methods), "modes": ["update", "freeze"],
+        "dataset": dataset_name, "seed": seed, "methods": list(methods), "modes": list(bn_modes),
         "epochs": epochs, "learning_rate": learning_rate, "momentum": momentum,
         "bound": bound, "normalization_mode": normalization_mode, "epsilon_step": epsilon_step,
         "kl_lambda": kl_lambda, "temperature": temperature,
@@ -198,8 +207,11 @@ def run_batchnorm_ablation(original, retrain, forget_loader_factory, evaluate_mo
         "model_source": "provided_in_memory_models; no checkpoint reloaded", "metadata": metadata or {},
         "freeze_scope": "BN.eval: use and preserve stored running statistics; affine BN parameters remain trainable",
     }
+    if experiment_name != "bn_ablation" or tuple(weighting_modes) != ("distance",):
+        settings.update(implementation="distance_weighting_ablation_v1", weighting_modes=list(weighting_modes),
+                        experiment_name=experiment_name)
     suffix = hashlib.sha256(json.dumps(settings, sort_keys=True).encode()).hexdigest()[:12]
-    output_dir = Path(output_root) / "bn_ablation" / f"{source_run_tag}_{suffix}"
+    output_dir = Path(output_root) / experiment_name / f"{source_run_tag}_{suffix}"
     checkpoint_dir = output_dir / "checkpoints"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     rows, models, stats = [], {}, {}
@@ -212,29 +224,33 @@ def run_batchnorm_ablation(original, retrain, forget_loader_factory, evaluate_mo
                   pin_memory=pin_memory, max_batches_per_epoch=max_batches_per_epoch,
                   bound=bound, cifar_mean=cifar_mean, cifar_std=cifar_std)
     for method in methods:
-        for mode in ("update", "freeze"):
-            name = f"{method}_bn_{mode}"
-            with _seeded(seed, device):
-                loader = forget_loader_factory()
-                kwargs = dict(common, bn_stats_mode=mode, diagnostics_dir=output_dir / name)
-                if method == "boundary_shrink":
-                    model, values = run_boundary_shrink(
-                        original, loader, checkpoint_dir / f"{name}.pt", **kwargs,
-                        normalization_mode=normalization_mode, attack_mean=attack_mean, attack_std=attack_std,
-                    )
-                else:
-                    model, values = run_boundary_distance(
-                        original, loader, checkpoint_dir / f"{name}.pt", **kwargs, method=method,
-                        retain_loader=retain_loader_factory() if method == ORIGINAL_KL_METHOD else None,
-                        epsilon_step=epsilon_step, kl_lambda=kl_lambda, temperature=temperature,
-                    )
-                metrics = _evaluate(evaluate_model, model)
-            values.update(_bn_change(original, model))
-            rows.append({"model": name, **metrics, "training_seconds": None,
-                         "unlearning_seconds": values["seconds"], "fgsm_cross_rate": values.get("cross_rate"),
-                         "unlearning_update_steps": values["update_steps"], "bn_stats_mode": mode,
-                         **{key: value for key, value in values.items() if key.startswith(("bn_", "mean_"))}})
-            models[name], stats[name] = model, values
+        for weighting_mode in weighting_modes:
+            for mode in bn_modes:
+                weight_suffix = "_uniform" if weighting_mode == "uniform" else ""
+                name = f"{method}{weight_suffix}_bn_{mode}"
+                with _seeded(seed, device):
+                    loader = forget_loader_factory()
+                    kwargs = dict(common, bn_stats_mode=mode, diagnostics_dir=output_dir / name)
+                    if method == "boundary_shrink":
+                        model, values = run_boundary_shrink(
+                            original, loader, checkpoint_dir / f"{name}.pt", **kwargs,
+                            normalization_mode=normalization_mode, attack_mean=attack_mean, attack_std=attack_std,
+                        )
+                    else:
+                        model, values = run_boundary_distance(
+                            original, loader, checkpoint_dir / f"{name}.pt", **kwargs, method=method,
+                            retain_loader=retain_loader_factory() if method == ORIGINAL_KL_METHOD else None,
+                            epsilon_step=epsilon_step, kl_lambda=kl_lambda, temperature=temperature,
+                            weighting_mode=weighting_mode,
+                        )
+                    metrics = _evaluate(evaluate_model, model)
+                values.update(_bn_change(original, model))
+                rows.append({"model": name, **metrics, "training_seconds": None,
+                             "unlearning_seconds": values["seconds"], "fgsm_cross_rate": values.get("cross_rate"),
+                             "unlearning_update_steps": values["update_steps"], "bn_stats_mode": mode,
+                             "weighting_mode": values.get("weighting_mode"),
+                             **{key: value for key, value in values.items() if key.startswith(("bn_", "mean_"))}})
+                models[name], stats[name] = model, values
     audit = None
     if audit_search:
         with _seeded(seed, device):
@@ -249,6 +265,65 @@ def run_batchnorm_ablation(original, retrain, forget_loader_factory, evaluate_mo
     results_table(rows, dataset_name=dataset_name).to_html(output_dir / "results.html")
     if plots:
         _plot_logs(output_dir, stats, audit)
-    print(f"BN ablation saved: {output_dir}")
+    print(f"{experiment_name} saved: {output_dir}")
     return {"models": models, "rows": rows, "stats": stats, "audit": audit,
             "output_dir": output_dir, "config_path": config_path, "metrics_path": metrics_path}
+
+
+def run_weighting_ablation(original, retrain, forget_loader_factory, evaluate_model, output_root, **settings):
+    """Isolate sample weighting: same distance targets, frozen BN, no retain KL.
+
+    Both students start independently from Original with the same seed/loaders.
+    Validate the logged labels, pseudo-labels and epsilons before comparing rows.
+    """
+    result = run_batchnorm_ablation(
+        original, retrain, forget_loader_factory, evaluate_model, output_root,
+        methods=(DISTANCE_METHOD,), bn_modes=("freeze",), weighting_modes=("distance", "uniform"),
+        experiment_name="weighting_ablation", audit_search=False, kl_lambda=0.0, **settings,
+    )
+    names = (f"{DISTANCE_METHOD}_bn_freeze", f"{DISTANCE_METHOD}_uniform_bn_freeze")
+    samples = []
+    for name in names:
+        with np.load(result["stats"][name]["boundary_samples_path"]) as arrays:
+            samples.append({key: arrays[key].copy() for key in arrays.files})
+    paired = all(np.array_equal(samples[0][key], samples[1][key])
+                 for key in ("label", "pseudo_label", "epsilon", "epoch"))
+    uniform = bool(np.all(samples[1]["weight"] == 1))
+    validation = {"labels_targets_epsilons_epochs_identical": paired, "uniform_weights_all_one": uniform}
+    (result["output_dir"] / "pair_validation.json").write_text(json.dumps(validation, indent=2), encoding="utf-8")
+    if not paired or not uniform:
+        raise RuntimeError("Invalid weighting pair: check fresh, seed-controlled forget loaders and uniform weights")
+    by_name = {row["model"]: row for row in result["rows"]}
+    distance, control = (by_name[name] for name in names)
+    comparison = {"model": names[1], "reference": names[0]}
+    for metric in ("test_retain_acc", "test_forget_acc", "train_retain_acc", "train_forget_acc"):
+        comparison[metric.replace("_acc", "_delta_pp")] = (
+            100 * (control[metric] - distance[metric]) if control.get(metric) is not None and distance.get(metric) is not None else None)
+    comparison["mean_forget_ce_delta"] = control["mean_forget_ce"] - distance["mean_forget_ce"]
+    _write_csv(result["output_dir"] / "weighting_comparison.csv", [comparison])
+    weight_summary = {}
+    for name, arrays in zip(names, samples):
+        weights = arrays["weight"]
+        weight_summary[name] = {"min": float(weights.min()), "max": float(weights.max()),
+                                "mean": float(weights.mean()), "std": float(weights.std())}
+    config = json.loads(result["config_path"].read_text())
+    config.update(pair_validation=validation, weighting_comparison=comparison, applied_weights=weight_summary)
+    result["config_path"].write_text(json.dumps(config, indent=2), encoding="utf-8")
+    if settings.get("plots", True):
+        import matplotlib.pyplot as plt
+        figure, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+        low = min(float(arrays["weight"].min()) for arrays in samples)
+        high = max(float(arrays["weight"].max()) for arrays in samples)
+        padding = max((high - low) * .05, .001)
+        bins = np.linspace(low - padding, high + padding, 31)
+        for arrays, label in zip(samples, ("Distance weights", "Uniform weights = 1")):
+            ax.hist(arrays["weight"], bins=bins, histtype="step", linewidth=2, label=label)
+        ax.set_xlabel("Applied sample weight")
+        ax.set_ylabel("Sample presentations across all unlearning epochs")
+        ax.set_title("Weighting control · identical distance pseudo-labels · BN freeze")
+        ax.legend()
+        for extension in ("png", "pdf"):
+            figure.savefig(result["output_dir"] / f"applied_weights.{extension}", bbox_inches="tight", dpi=180)
+        plt.close(figure)
+    result.update(comparison=[comparison], pair_validation=validation, applied_weights=weight_summary)
+    return result
