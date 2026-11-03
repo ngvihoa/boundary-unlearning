@@ -16,7 +16,7 @@ from .attacks import find_boundary_epsilon
 from .constants import CIFAR_MEAN, CIFAR_STD, REPO_ATTACK_MEAN, REPO_ATTACK_STD
 from .enhanced import weight_assign_from_epsilon
 from .reporting import results_table
-from .unlearning import DISTANCE_METHOD, ORIGINAL_KL_METHOD, run_boundary_distance, run_boundary_shrink
+from .unlearning import DISTANCE_METHOD, ORIGINAL_KL_METHOD, run_boundary_distance, run_boundary_shrink, run_boundary_expanding
 
 
 @contextmanager
@@ -327,3 +327,126 @@ def run_weighting_ablation(original, retrain, forget_loader_factory, evaluate_mo
         plt.close(figure)
     result.update(comparison=[comparison], pair_validation=validation, applied_weights=weight_summary)
     return result
+
+
+def run_phase1_epoch_sweep(source, train_dataset, test_dataset, output_root, *, device,
+                           epochs=(1, 3, 5, 10, 20), plots=True):
+    """Compare paper-method budgets using the same evaluated Phase 1 initializer.
+
+    Restore evaluated snapshots (never the legacy best checkpoints). Every
+    method/budget starts independently with a fresh seeded loader and optimizer.
+    Export a complete Phase 1 bundle per budget so Phase 2 can select one later.
+    """
+    from functools import partial
+    import platform
+    import subprocess
+    from torch.utils.data import Subset
+    from . import data, phases, training, unlearning as algorithms
+
+    budgets = list(epochs)
+    if (not budgets or any(isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 1
+                           for value in budgets) or len(set(budgets)) != len(budgets)):
+        raise ValueError("Epoch budgets must be unique positive integers")
+    budgets = [int(value) for value in budgets]
+    loaded = phases.load_phase1_bundle(source, device="cpu")
+    config = loaded["config"]
+    phases.validate_phase1_dataset(config, train_dataset, test_dataset)
+    settings = {"implementation": "phase1_epoch_sweep_v1", "epochs": budgets,
+                "source_run": loaded["manifest"]["run_tag"],
+                "source_manifest_sha256": loaded["manifest_sha256"],
+                "source_checkpoint_hashes": {name: entry["sha256"] for name, entry in loaded["manifest"]["models"].items()},
+                "seed": config["seed"], "bn_stats_mode": "update",
+                "unlearning_code_sha256": hashlib.sha256(Path(algorithms.__file__).read_bytes()).hexdigest(),
+                "runner_code_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                "initializer": "same evaluated Original for every method/budget; fresh optimizer and loader"}
+    code_root = Path(__file__).resolve().parents[1]
+    current_commit = subprocess.check_output(["git", "-C", str(code_root), "rev-parse", "HEAD"], text=True).strip() if (code_root / ".git").exists() else None
+    suffix = hashlib.sha256(json.dumps(settings, sort_keys=True).encode()).hexdigest()[:12]
+    directory = Path(output_root) / "epoch_sweep" / f"{settings['source_run']}_{suffix}"
+    directory.mkdir(parents=True, exist_ok=True)
+    original, retrain = (loaded["models"][name].to(device) for name in ("original", "retrain"))
+    baseline_rows = copy.deepcopy(loaded["rows"][:2])
+    forget_class = config["forget_class"]
+    forget = Subset(train_dataset, np.flatnonzero(train_dataset.targets == forget_class).tolist())
+    retain = Subset(train_dataset, np.flatnonzero(train_dataset.targets != forget_class).tolist())
+    test_forget = Subset(test_dataset, np.flatnonzero(test_dataset.targets == forget_class).tolist())
+    test_retain = Subset(test_dataset, np.flatnonzero(test_dataset.targets != forget_class).tolist())
+    loader = partial(data.make_loader, batch_size=config["batch_size"], seed=config["seed"],
+                     num_workers=config["num_workers"], pin_memory=torch.device(device).type == "cuda")
+    evaluate = partial(training.evaluate_model_splits, device=device,
+                       test_loader=loader(test_dataset), test_retain_loader=loader(test_retain),
+                       test_forget_loader=loader(test_forget), train_retain_eval_loader=loader(retain),
+                       train_forget_eval_loader=loader(forget), include_train=config["evaluate_train_splits"])
+    common = dict(device=device, learning_rate=config["unlearn_learning_rate"], momentum=config["momentum"],
+                  pin_memory=torch.device(device).type == "cuda", max_batches_per_epoch=config["max_batches_per_epoch"])
+    rows, bundles = [], {}
+    for budget in budgets:
+        run_tag = f"cifar100_phase1_epochs{budget}_{suffix}"
+        destination = directory / "runs" / run_tag
+        current_rows, students, stats = copy.deepcopy(baseline_rows), {}, {}
+        for method in phases.PHASE1_MODELS[2:]:
+            with _seeded(config["seed"], device):
+                checkpoint = destination / "checkpoints" / f"{method}.pt"
+                if method == "boundary_shrink":
+                    model, values = run_boundary_shrink(
+                        original, loader(forget, shuffle=True), checkpoint, **common, epochs=budget,
+                        bound=config["fgsm_bound"], normalization_mode=config["attack_normalization"],
+                        cifar_mean=config["input_mean"], cifar_std=config["input_std"],
+                        attack_mean=config["attack_mean"], attack_std=config["attack_std"],
+                        extra_exp=None, bn_stats_mode="update", diagnostics_dir=destination / method,
+                    )
+                else:
+                    model, values = run_boundary_expanding(
+                        original, loader(forget, shuffle=True), checkpoint, **common, epochs=budget,
+                        num_classes=config["num_classes"],
+                    )
+                metrics = _evaluate(evaluate, model)
+            row = {"model": method, **metrics, "training_seconds": None,
+                   "unlearning_seconds": values["seconds"], "fgsm_cross_rate": values.get("cross_rate"),
+                   "unlearning_update_steps": values["update_steps"], "student_update_steps": values["update_steps"],
+                   "total_update_steps": values["update_steps"], "total_unlearning_seconds": values["seconds"],
+                   "initializer": "original", "unlearn_epochs": budget}
+            current_rows.append(row)
+            rows.append(row)
+            students[method], stats[method] = model, values
+        candidate_config = copy.deepcopy(config)
+        candidate_config.update(unlearn_epochs=budget, unlearning_stats=stats, epoch_sweep=settings,
+                                source_code_commit=config.get("code_commit"), code_commit=current_commit,
+                                device=str(device),
+                                environment={**config.get("environment", {}), "python": platform.python_version(),
+                                             "torch": str(torch.__version__), "numpy": np.__version__},
+                                baseline_checkpoint_policy="evaluated snapshots; paths relative to this bundle",
+                                baseline_checkpoints={name: f"checkpoints/{name}_evaluated.pt" for name in ("original", "retrain")})
+        candidate_config["run_tag_settings"] = {**config["run_tag_settings"], "unlearn_epochs": budget,
+                                                "epoch_sweep": settings}
+        bundles[budget] = phases.save_phase1_bundle(
+            {"original": original, "retrain": retrain, **students}, current_rows,
+            candidate_config, destination, run_tag=run_tag,
+        )
+    _write_csv(directory / "metrics.csv", [*baseline_rows, *rows])
+    (directory / "config.json").write_text(json.dumps(settings, indent=2), encoding="utf-8")
+    if plots:
+        import matplotlib.pyplot as plt
+        figure, axes = plt.subplots(2, 2, figsize=(11, 7), layout="constrained")
+        metrics = ("test_retain_acc", "test_forget_acc", "train_retain_acc", "train_forget_acc")
+        for ax, metric in zip(axes.flat, metrics):
+            for method in phases.PHASE1_MODELS[2:]:
+                selected = sorted((row for row in rows if row["model"] == method), key=lambda row: row["unlearn_epochs"])
+                ax.plot([row["unlearn_epochs"] for row in selected],
+                        [100 * row[metric] if row[metric] is not None else np.nan for row in selected],
+                        marker="o", label=method.replace("boundary_", "").title())
+            for row, style in zip(baseline_rows, (":", "--")):
+                if row.get(metric) is not None:
+                    ax.axhline(100 * row[metric], linestyle=style, color="gray", label=row["model"].title())
+            ax.set_title(metric.replace("_acc", "").replace("_", " ").title())
+            ax.set_xlabel("Unlearning epochs")
+            ax.set_ylabel("Accuracy (%)")
+            ax.set_xticks(sorted(budgets))
+            ax.grid(alpha=.2)
+            ax.legend(fontsize=8)
+        figure.suptitle("Phase 1 · Epoch comparison · Same evaluated Original · BN update")
+        for extension in ("png", "pdf"):
+            figure.savefig(directory / f"epochs.{extension}", bbox_inches="tight", dpi=180)
+        plt.close(figure)
+    return {"rows": rows, "baseline_rows": baseline_rows, "bundles": bundles,
+            "output_dir": directory, "settings": settings}

@@ -23,6 +23,8 @@ Thông tin từng thí nghiệm:
   chạy cặp Shrink update/freeze từ cùng Original, không train lại baseline.
 - [Thí nghiệm 05 — Distance weights so với weights = 1](experiments/05-cifar100-weighting-ablation.md):
   cùng distance pseudo-label, BN freeze và initializer; chỉ thay sample weights.
+- [Thí nghiệm 06 — So sánh epoch unlearning Phase 1](experiments/06-cifar100-phase1-epoch-comparison.md):
+  thử 1/3/5/10/20 epoch cho hai phương pháp gốc, tái sử dụng evaluated snapshots.
 
 | File | Nội dung |
 | --- | --- |
@@ -178,6 +180,11 @@ python -m unittest discover -s tests -v
 ```
 
 ## Ba biến thể bổ sung
+
+Trước khi sang Phase 2, có thể khảo sát số epoch trong chính Phase 1. Sau evaluation,
+bật cell **Optional: Phase 1 epoch comparison**, sửa `UNLEARN_EPOCHS_TO_TEST` rồi
+chạy riêng cell. Original/Retrain không train lại; mỗi mốc có bundle 4 model và
+ZIP riêng để làm đầu vào cho Phase 2. Xem [hướng dẫn chạy](experiments/06-cifar100-phase1-epoch-comparison.md).
 
 Notebook CIFAR-10 tiếp tục chạy **5 biến thể unlearning + Original và Retrain**.
 CIFAR-100 **Phase 2** nạp 4 model Phase 1, rồi chỉ train ba biến thể:
