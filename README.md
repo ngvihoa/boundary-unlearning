@@ -1,7 +1,13 @@
 # Boundary Unlearning trên Kaggle
 
 [Notebook CIFAR-10](experiments/boundary-unlearning-cifar-10-experiment.ipynb)
-và [notebook CIFAR-100](experiments/boundary-unlearning-cifar-100-experiment.ipynb) nằm trong `experiments/`.
+và hai notebook CIFAR-100 nằm trong `experiments/`:
+
+| Notebook CIFAR-100 | Phạm vi |
+| --- | --- |
+| [Phase 1](experiments/boundary-unlearning-cifar-100-experiment.ipynb) | Train và đánh giá Original, Retrain, Shrink, Expanding; export model/kết quả |
+| [Phase 2](experiments/boundary-unlearning-cifar-100-phase2.ipynb) | Nạp đúng 4 model Phase 1; thử distance/KL và các ablation, không train lại baseline |
+
 Các hàm và class nằm trong package `boundary_unlearning/`, có thể import độc lập
 sau khi clone repo.
 
@@ -9,8 +15,8 @@ Thông tin từng thí nghiệm:
 
 - [Thí nghiệm 01 — CIFAR-10, quên lớp deer](experiments/01-cifar-10.md): cấu hình
   và kết quả đã lưu từ lần chạy Kaggle ngày 17/10/2026.
-- [Thí nghiệm 02 — CIFAR-100, quên lớp beaver](experiments/02-cifar-100.md): cấu
-  hình dự kiến và trạng thái kiểm chứng, chưa có kết quả train đầy đủ.
+- [Thí nghiệm 02 — CIFAR-100 Phase 1, quên lớp beaver](experiments/02-cifar-100.md):
+  cấu hình phương pháp gốc, đánh giá 4 model và đóng gói bàn giao sang Phase 2.
 - [Thí nghiệm 03 — Ba biến thể distance weighting/KL](experiments/03-distance-weighted-variants.md):
   luồng tích hợp vào cả hai notebook, ngân sách cập nhật và cách chạy từng cell.
 - [Thí nghiệm 04 — BatchNorm ablation CIFAR-100](experiments/04-cifar100-batchnorm-ablation.md):
@@ -31,6 +37,7 @@ Thông tin từng thí nghiệm:
 | `visualization.py` | Accuracy/chi phí, Grad-CAM, entropy và t-SNE cho các model đã có |
 | `diagnostics.py` | Đối chứng BatchNorm, loss và audit epsilon/weight từ model đang có |
 | `artifacts.py` | Thu gom kết quả và tạo file ZIP để tải về |
+| `phases.py` | Snapshot model đã đánh giá, manifest/SHA-256 và khôi phục Phase 1 cho Phase 2 |
 | `constants.py` | Tên lớp và các hằng số chuẩn hóa |
 
 ## Chạy từ GitHub trên Kaggle
@@ -130,13 +137,41 @@ dẫn mount cũ `/kaggle/input/cifar-100` và thư mục con `cifar-100-python/`
 - Mặc định `ATTACK_NORMALIZATION = "matched"`, dữ liệu và FGSM dùng cùng mean/std
   `(0.5, 0.5, 0.5)`. Notebook CIFAR-10 tiếp tục giữ chế độ `repo_exact`.
 - Giữ cấu hình ban đầu: 30 epoch train/retrain, LR `0.1`, batch 64; 10 epoch
-  unlearning, LR `1e-5`. Đây là cấu hình khởi đầu, chưa phải kết quả đã kiểm chứng
-  cho CIFAR-100. Một lớp có 500 ảnh train, tương ứng khoảng 80 bước unlearning.
+  unlearning, LR `1e-5`, BN update cho Shrink thuần. Đây là cấu hình chuyển từ
+  CIFAR-10, không phải tuyên bố tái lập toàn bộ paper trên CIFAR-100.
+  Một lớp có 500 ảnh train, tương ứng khoảng 80 bước unlearning.
 - Run tag bắt đầu bằng `cifar100_`; config ghi dataset, loại nhãn, danh sách lớp
   và chuẩn hóa. Checkpoint, CSV/JSON/HTML nằm trong `result/`; cell cuối tạo
   `result.zip` giống notebook CIFAR-10.
 
-Kiểm tra loader và nhãn bằng dữ liệu giả lập tại local:
+**Chạy Phase 1 trong phiên mới**, kiểm tra bảng 4 model rồi tải `result.zip`.
+Ngoài các checkpoint tốt nhất được lưu khi train, gói có:
+
+```text
+result/phase1/<run_tag>/
+├── phase1_manifest.json      # Run tag, SHA-256, chính sách snapshot
+├── config.json              # Cấu hình, tên lớp, fingerprint pixels/labels
+├── rows.json / metrics.csv / results.html
+└── checkpoints/             # Đúng 4 state_dict đã dùng trong bảng đánh giá
+    ├── original_evaluated.pt
+    ├── retrain_evaluated.pt
+    ├── boundary_shrink_evaluated.pt
+    └── boundary_expanding_evaluated.pt
+```
+
+Sau đó import notebook **Phase 2**, gắn lại CIFAR-100 và gắn Output đã lưu của
+notebook Phase 1, hoặc upload `result.zip` thành Kaggle Dataset rồi **Add Input**.
+`PHASE1_SOURCE=None` tự tìm một gói duy nhất; nếu có nhiều gói, điền đường dẫn ZIP,
+thư mục chứa một manifest hoặc chính file `phase1_manifest.json` cần sử dụng.
+Phase 2 kiểm tra SHA-256, khôi phục cả model Expanding đã prune, xác nhận dữ liệu
+và dùng lại cấu hình Phase 1. Thiếu/sai gói sẽ báo lỗi, không tự train baseline.
+Các bản tham chiếu được sao chép vào `result/phase1_source/` để export Phase 2 tự đủ.
+
+Bundle lưu **model đang được đánh giá**, không tự thay bằng checkpoint tốt nhất
+ở epoch khác. Không cần trạng thái optimizer: các biến thể Phase 2 khởi tạo
+optimizer SGD mới như flow hiện tại. Hai phase dùng run tag riêng chứa `phase1`/`phase2`.
+
+Kiểm tra loader, bàn giao giữa hai phase và smoke workflow bằng dữ liệu giả lập:
 
 ```bash
 python -m unittest discover -s tests -v
@@ -144,10 +179,11 @@ python -m unittest discover -s tests -v
 
 ## Ba biến thể bổ sung
 
-Cả hai notebook mặc định chạy **5 biến thể unlearning + Original và Retrain**:
-Boundary Shrink, Boundary Expanding, distance weighting, distance weighting + KL
-từ Original và distance weighting + KL từ Boundary Shrink. Mỗi biến thể mới có
-cell riêng; cell cuối đánh giá đủ 7 model và export cùng một CSV/JSON/ZIP.
+Notebook CIFAR-10 tiếp tục chạy **5 biến thể unlearning + Original và Retrain**.
+CIFAR-100 **Phase 2** nạp 4 model Phase 1, rồi chỉ train ba biến thể:
+distance weighting, distance weighting + KL từ Original và distance weighting + KL
+từ Boundary Shrink. Mỗi biến thể mới có cell riêng; cell cuối đánh giá đủ 7 model
+và export cùng một CSV/JSON/ZIP.
 
 Biến thể KL từ Boundary Shrink khởi tạo từ model distance weighting, nên student
 được cập nhật tổng cộng **20 epoch**, gồm hai giai đoạn 10 epoch. Bảng chi tiết
@@ -159,14 +195,15 @@ Boundary Shrink gốc của CIFAR-10 vẫn dùng `repo_exact`. Đây cũng là m
 khi diễn giải kết quả, bên cạnh loss và pseudo-label. `EXTRA_EXP="weight_assign"`
 cũ là probability weighting của tác giả, không phải distance weighting mới.
 
-Tên checkpoint Original/Retrain tiếp tục dùng hash cấu hình baseline cũ; hash
+Trên CIFAR-10, tên checkpoint Original/Retrain tiếp tục dùng hash baseline cũ; hash
 kết quả mới chứa thêm epsilon step và cấu hình KL. Khi tái sử dụng checkpoint,
 bật `REUSE_CHECKPOINTS=True` và kiểm tra đường dẫn được in ra. Checkpoint baseline
 lưu model tốt nhất, khác với model cuối epoch đang nằm trong phiên train trước đó.
 
 ## Visualization
 
-Hai notebook có phần **Visualize the seven-model comparison** trước cell export.
+Các notebook có phần visualization trước cell export: CIFAR-100 Phase 1 dùng
+4 model; Phase 2 và CIFAR-10 dùng 7 model.
 Chạy **Visualization setup** rồi chọn cell vẽ: accuracy/chi phí, Grad-CAM,
 entropy hoặc t-SNE. Các cell dùng model đang có, không train hoặc nạp checkpoint lại.
 Sau khi cập nhật riêng module visualization, chỉ cần reload, chạy lại setup và
@@ -187,7 +224,7 @@ tự đưa toàn bộ thư mục hình vào ZIP. Xem [hướng dẫn chi tiết]
 
 ## Kiểm tra BatchNorm trên CIFAR-100
 
-Sau khi cập nhật code trong phiên Kaggle đã có Original/Retrain, bật
+Trên CIFAR-100, chạy ablation trong **Phase 2** sau khi nạp bundle. Bật
 `RUN_BN_ABLATION=True` ở cell **Optional: paired BatchNorm ablation**, rồi chạy riêng
 cell đó. Mặc định chỉ chạy Boundary Shrink với BN update/freeze, giữ nguyên epoch/LR
 và batch size, lưu kết quả trong `result/bn_ablation/` và tạo ZIP ngay.
@@ -204,7 +241,7 @@ Xem [thiết kế, log và cách đọc kết quả](experiments/04-cifar100-bat
 
 ## Đối chứng riêng distance weighting
 
-Sau khi cập nhật code, chạy một cell trong phiên đã có Original/Retrain:
+Trong phiên **Phase 2** đã nạp các model, bật cell weighting ablation hoặc chạy:
 
 ```python
 from pathlib import Path

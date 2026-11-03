@@ -1,10 +1,24 @@
 # Thí nghiệm 05 — Distance weights so với weights = 1 trên CIFAR-100
 
+## Vị trí và kết quả đã nhận
+
+Đây là ablation **Phase 2**, chạy sau khi nạp bundle trong
+[notebook Phase 2](boundary-unlearning-cifar-100-phase2.ipynb), bằng cell tùy chọn
+cuối notebook hoặc entry script bên dưới. Không chạy trong notebook Phase 1.
+
+Theo bảng người dùng cung cấp từ lượt chạy trước khi tách phase: cả hai nhánh đạt
+test retain 51,80%, test forget 6%, test all 51,34%; train forget lần lượt
+50,60% (distance) và 50,40% (uniform). Chênh lệch uniform − distance là
+−0,008081 điểm phần trăm train retain, −0,2 điểm phần trăm train forget và 0 trên
+test retain/forget. Cả hai có 80 update, không KL và BN buffers không đổi.
+Kết quả này chưa cho thấy lợi ích rõ của weighting trong lần chạy đó;
+không phải kết luận tổng quát cho mọi seed/cấu hình.
+
 ## Mục tiêu và căn cứ
 
-Tách ảnh hưởng của **sample weighting** khỏi cách tìm pseudo-label. Trạng thái:
-đã chuẩn bị code và kiểm chứng bằng dữ liệu nhỏ tại local; chưa chạy cặp đối chứng
-này trên CIFAR-100 thật ở Kaggle.
+Tách ảnh hưởng của **sample weighting** khỏi cách tìm pseudo-label. Đã có kết quả
+Kaggle do người dùng cung cấp ở trên; flow hai phase mới được kiểm chứng bằng
+dữ liệu nhỏ tại local và chưa có lượt Kaggle đầy đủ mới.
 
 Theo kết quả BN ablation do người dùng cung cấp, distance weighting + BN freeze
 đạt test retain 51,80%, test forget 6%, train forget 50,60%. Thêm Original KL cho

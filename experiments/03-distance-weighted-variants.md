@@ -1,12 +1,15 @@
-# Thí nghiệm 03 — Distance weighting và retain distillation
+# Thí nghiệm 03 — Phase 2: Distance weighting và retain distillation
 
 ## Nguồn và trạng thái
 
 - Ngày tích hợp: 03/11/2026.
 - Nguồn thuật toán: ba cell cuối của `no-refactor-new.ipynb` (nhãn CELL 18–20).
 - Flow: [CIFAR-10](boundary-unlearning-cifar-10-experiment.ipynb) và
-  [CIFAR-100](boundary-unlearning-cifar-100-experiment.ipynb).
-- Đã kiểm tra trên CPU bằng dữ liệu nhỏ; **chưa có kết quả đầy đủ trên GPU**.
+  [CIFAR-100 Phase 2](boundary-unlearning-cifar-100-phase2.ipynb).
+- CIFAR-100 được tách khỏi [Phase 1](02-cifar-100.md): Phase 1 chỉ có 4 model gốc;
+  Phase 2 nạp các snapshot đã đánh giá, không train lại Original/Retrain/Shrink/Expanding.
+- Đã có kết quả các lần chạy flow cũ do người dùng cung cấp; flow hai notebook mới
+  được kiểm chứng bằng dữ liệu nhỏ tại local, chưa có lượt chạy Kaggle đầy đủ mới.
 - Không thay đổi cấu hình train/retrain: 30 epoch, SGD LR 0.1, momentum 0.9,
   batch 64; mỗi giai đoạn unlearning 10 epoch, LR 1e-5 với profile `paper`.
 - Giữ lớp quên: CIFAR-10 `4 = deer`; CIFAR-100 `4 = beaver`.
@@ -65,7 +68,19 @@ Chi phí chuẩn bị model được tính đầy đủ dù model đã có sẵn
 
 ## Chạy từng cell và xuất kết quả
 
-Trong phiên Kaggle đã có Original/Retrain, không cần chạy lại các cell train:
+**CIFAR-100:** chạy xong Phase 1, tải `result.zip`, rồi gắn gói đó hoặc Output đã
+lưu của Phase 1 vào notebook Phase 2, cùng dataset CIFAR-100. Cell cấu hình tự tìm
+một bundle hoặc dùng đường dẫn `PHASE1_SOURCE` chỉ định. Nó kiểm tra SHA-256 và
+khôi phục đúng 4 model đã đánh giá, kể cả Expanding dạng Sequential đã prune.
+Pixel/label, thứ tự lớp và normalization phải khớp Phase 1; không có fallback train.
+
+Chạy lần lượt ba cell biến thể và evaluation để so sánh 7 model. BN update là mặc
+định để khớp Phase 1; các cell BN/weighting ablation cuối notebook mặc định tắt.
+Chạy lại cell runner chỉ định nghĩa lại hàm, không thay các baseline đã nạp.
+Phase 2 ghi source run tag, SHA manifest/checkpoints và sao chép bundle tham chiếu
+vào `result/phase1_source/`; cell cuối tạo ZIP gồm tham chiếu và kết quả mới.
+
+**CIFAR-10 và các phiên cũ đang có model:** không cần chạy lại các cell train:
 
 1. Cập nhật code bằng cell **Small code update**: bỏ comment hai lệnh Git rồi chạy
    để fetch/checkout và reload module. Nếu đã fetch bằng cell khác, chỉ cần reload.

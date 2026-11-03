@@ -7,6 +7,8 @@ Grad-CAM, t-SNE và log entropy. Bổ sung hai biểu đồ accuracy và chi ph�
 5 biến thể unlearning + Original/Retrain. File nguồn của bạn vẫn được giữ nguyên.
 
 Code dùng chung nằm ở [visualization.py](../boundary_unlearning/visualization.py).
+Sau khi tách CIFAR-100: Phase 1 chỉ vẽ 4 model gốc; Phase 2 vẽ 4 model được
+restore cùng 3 biến thể. CIFAR-10 tiếp tục dùng flow 7 model hiện tại.
 Phần training, chuẩn hóa dữ liệu và thuật toán unlearning không thay đổi.
 Các hình minh họa khi kiểm chứng dùng fixture và model nhỏ, chưa phải kết quả
 thí nghiệm đầy đủ để đưa vào báo cáo.
@@ -111,6 +113,14 @@ Cell export chỉ đóng gói các hình đã có, không chạy visualization l
 
 ## Kiểm chứng
 
+- Test tích hợp hai phase thực thi đủ các cell accuracy/chi phí, Grad-CAM,
+  entropy và t-SNE trên AllCNN 100 lớp, gồm Expanding đã prune và model nạp từ ZIP.
+  Phase 1 dùng 4 model, Phase 2 dùng 7; test giảm entropy còn 12 mẫu/split,
+  t-SNE còn 100 mẫu/250 iteration để kiểm chứng tại local.
+- Sau mỗi cell vẽ, so sánh trọng số/BN buffers, gradient, train/eval mode và
+  forward hooks để xác nhận model không bị thay đổi. Kiểm tra mapping model,
+  chỉ số mẫu, shape/giá trị hữu hạn trong NPZ và các file hình/dữ liệu có trong ZIP
+  của cả hai phase.
 - Test CPU cho sampling, gradient/BatchNorm/state/hook cleanup, entropy đối chiếu
   công thức, giới hạn mẫu, t-SNE 100 lớp, model prune, đơn vị accuracy/chi phí và ZIP.
 - Chạy thử hai notebook với AllCNN và fixture nhỏ, đủ 7 model và toàn bộ cell vẽ.

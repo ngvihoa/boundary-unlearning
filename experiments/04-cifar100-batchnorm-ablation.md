@@ -1,10 +1,20 @@
 # Thí nghiệm 04 — BatchNorm ablation trên CIFAR-100
 
+## Vị trí trong flow hai phase
+
+Thí nghiệm này thuộc **Phase 2**. Chạy trong
+[notebook Phase 2](boundary-unlearning-cifar-100-phase2.ipynb) sau khi nạp bundle
+Phase 1; cell BN ablation đã được chuyển ra khỏi notebook baseline.
+Các hướng dẫn dùng model trong phiên bên dưới cũng áp dụng cho model vừa restore.
+Kết quả do người dùng cung cấp cho Shrink update/freeze có test retain 43,42%/51,15%,
+train forget 0%/41,20%, test forget 0%/4%; đây là các lượt chạy trước khi tách phase,
+không phải kết quả mới của notebook Phase 1 vừa sửa.
+
 ## Mục tiêu và trạng thái
 
 Kiểm tra việc BatchNorm dùng/cập nhật statistics theo riêng forget set có liên
-quan đến suy giảm retain accuracy hay không. **Đã chuẩn bị code và kiểm tra CPU
-bằng dữ liệu nhỏ; chưa có kết quả đối chứng đầy đủ trên Kaggle.**
+quan đến suy giảm retain accuracy hay không. Đã có bảng kết quả Kaggle do người
+dùng cung cấp; flow khôi phục model qua hai phase mới được kiểm tra tại local.
 
 Notebook CIFAR-100 đã có run `cifar100_paper_forget4_1084d69d`, quên lớp
 `4 = beaver`, với test retain/forget: Original 52,65%/26%; Retrain 52,27%/0%;

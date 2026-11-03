@@ -148,7 +148,7 @@ class BNAblationTests(unittest.TestCase):
 
     def test_kaggle_entry_cell_runs_independently_and_preserves_main_results(self):
         repo = Path(__file__).resolve().parents[1]
-        notebook = json.loads((repo / 'experiments/boundary-unlearning-cifar-100-experiment.ipynb').read_text())
+        notebook = json.loads((repo / 'experiments/boundary-unlearning-cifar-100-phase2.ipynb').read_text())
         source = next(''.join(c['source']) for c in notebook['cells'] if ''.join(c.get('source', [])).startswith('# BN ABLATION:'))
         source = source.replace('RUN_BN_ABLATION = False', 'RUN_BN_ABLATION = True')
         main_rows = [{'model': 'original', 'test_all_acc': .5}]
