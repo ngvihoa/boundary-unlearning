@@ -25,7 +25,7 @@ Vietnam National University, Ho Chi Minh City}}
 Machine unlearning aims to remove the influence of data requested for deletion from a trained model. However, retraining a model from scratch on the remaining data is often costly in terms of time and computational resources. Boundary Unlearning addresses this problem by shifting decision boundaries to alter predictions on the class to be forgotten while limiting the impact on the retained classes. This study evaluates Boundary Shrink and Boundary Expanding and investigates enhanced Boundary Shrink configurations that combine boundary-crossing threshold search, pseudo-label confidence weighting, and knowledge distillation from a pretrained model. The methods are compared with Original and Retrain models on CIFAR-10 and CIFAR-100, while the enhanced configurations are evaluated on CIFAR-10 only. The results show that Boundary Shrink and Boundary Expanding reduce recognition accuracy on the forgotten class but degrade performance on the retained classes. The enhanced configurations recover part of the retained-class performance at a higher computational cost.
 \end{abstract}
 \begin{IEEEkeywords}
-Machine Unlearning, Class Unlearning, Boundary Shrink, Boundary Expanding, CIFAR-10, CIFAR-100, Knowledge Distillation.
+Machine Unlearning, Class Unlearning, Boundary Shrink, Boundary Expanding, CIFAR-10, CIFAR-100.
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -152,7 +152,7 @@ During perturbation generation for Boundary Shrink on CIFAR-10, the normalizatio
 \subsection{Evaluation Criteria}
 Utility is measured by accuracy on the training retain set, $\operatorname{Acc}(D_r)$, and the test retain set, $\operatorname{Acc}(D_{rt})$. Recognition of the forgotten class is measured by $\operatorname{Acc}(D_f)$ and $\operatorname{Acc}(D_{ft})$, respectively. Retrain serves as the reference for all four metrics; test-retain accuracy reflects generalization to the retained classes.
 
-Computational efficiency is measured by execution time in seconds. Training time is recorded for Original and Retrain, while unlearning time is recorded for Boundary Shrink, Boundary Expanding, and their variants. Speedup is defined as the ratio of Retrain training time to unlearning time within the same setting. For DW+KL-S, total time and total update steps include creating the DW model used to initialize the student and the Boundary Shrink model used as the teacher. These costs exclude training the shared Original model.
+Computational efficiency is measured by execution time in seconds. Training time is recorded for Original and Retrain, while unlearning time is recorded for Boundary Shrink, Boundary Expanding, and their variants. Speedup is defined as the ratio of Retrain training time to unlearning time within the same setting. For W+KL-S, total time and total update steps include creating the W model used to initialize the student and the Boundary Shrink model used as the teacher. These costs exclude training the shared Original model.
 
 Explainability is examined using Grad-CAM maps for forgotten-class samples and t-SNE visualizations of feature representations. Entropy ECDFs provide an additional description of output uncertainty.
 
@@ -230,12 +230,12 @@ Method & \shortstack{Train\\ret.} & \shortstack{Train\\forg.} & \shortstack{Test
 \midrule
 Retrain & 99.70 & 0.00 & 75.61 & 0.00 & 0.00\\
 Boundary Shrink & 94.86 & 11.54 & 62.07 & 2.30 & \(-\)13.54\\
-DW & 95.76 & 10.12 & 63.74 & 2.00 & \(-\)11.87\\
-DW+KL-S & 96.63 & 9.14 & 65.74 & 1.70 & \(-\)9.87\\
+W & 95.76 & 10.12 & 63.74 & 2.00 & \(-\)11.87\\
+W+KL-S & 96.63 & 9.14 & 65.74 & 1.70 & \(-\)9.87\\
 \bottomrule
 \end{tabular*}
 \end{table}
-Table~\ref{tab:variants} shows that DW improves test-retain accuracy by 1.67 percentage points over Boundary Shrink. DW+KL-S achieves the highest test-retain accuracy among the evaluated unlearning methods, improving on Boundary Shrink by 3.67 percentage points. Test-forget accuracy decreases from 2.30\% to 1.70\%, corresponding to 17 of the 1,000 deer images still being correctly classified. Nevertheless, this configuration remains 9.87 percentage points below Retrain in test-retain accuracy and retains a train-forget accuracy of 9.14\%.
+Table~\ref{tab:variants} shows that W improves test-retain accuracy by 1.67 percentage points over Boundary Shrink. W+KL-S achieves the highest test-retain accuracy among the evaluated unlearning methods, improving on Boundary Shrink by 3.67 percentage points. Test-forget accuracy decreases from 2.30\% to 1.70\%, corresponding to 17 of the 1,000 deer images still being correctly classified. Nevertheless, this configuration remains 9.87 percentage points below Retrain in test-retain accuracy and retains a train-forget accuracy of 9.14\%.
 
 \begin{table}[t]
 \centering
@@ -249,12 +249,12 @@ Table~\ref{tab:variants} shows that DW improves test-retain accuracy by 1.67 per
 Method & \shortstack{Final stage\\(s)} & \shortstack{End-to-end\\(s)} & \shortstack{Student\\steps} & \shortstack{Total\\steps} & Speedup \\
 \midrule
 Boundary Shrink & 23.24 & 23.24 & 790 & 790 & 17.2\(\times\)\\
-DW & 94.35 & 94.35 & 790 & 790 & 4.23\(\times\)\\
-DW+KL-S & 109.38 & 226.97 & 1,580 & 2,370 & 1.76\(\times\)\\
+W & 94.35 & 94.35 & 790 & 790 & 4.23\(\times\)\\
+W+KL-S & 109.38 & 226.97 & 1,580 & 2,370 & 1.76\(\times\)\\
 \bottomrule
 \end{tabular*}
 \end{table}
-The accuracy gains incur a substantial cost (Table~\ref{tab:variant-cost}). DW takes approximately 4.1 times as long as Boundary Shrink with the same 790 updates because it searches over multiple perturbation levels. DW+KL-S requires 109.38 seconds for the final stage and 226.97 seconds in total, including the preparation of DW and Boundary Shrink. The configuration achieving 65.74\% test-retain accuracy provides a speedup of $1.76\times$. Boundary Expanding is the fastest method in the CIFAR-10 run; DW+KL-S achieves the highest test-retain accuracy among the evaluated unlearning methods but uses a larger computational budget.
+The accuracy gains incur a substantial cost (Table~\ref{tab:variant-cost}). W takes approximately 4.1 times as long as Boundary Shrink with the same 790 updates because it searches over multiple perturbation levels. W+KL-S requires 109.38 seconds for the final stage and 226.97 seconds in total, including the preparation of W and Boundary Shrink. The configuration achieving 65.74\% test-retain accuracy provides a speedup of $1.76\times$. Boundary Expanding is the fastest method in the CIFAR-10 run; W+KL-S achieves the highest test-retain accuracy among the evaluated unlearning methods but uses a larger computational budget.
 
 \subsection{Descriptive Analysis on CIFAR-10}
 The supplementary figures in Appendix~\ref{app:visual} use the same models evaluated on CIFAR-10. Grad-CAM uses four train-forget samples with subset indices 355, 2021, 4644, and 1442. The target layer is the final convolutional layer, and the target logit is always deer. The deer probability decreases substantially in these examples after unlearning. The maps show the contribution of each image region to the deer logit; the accompanying predicted label is the class with the highest output probability. Each CAM is independently min--max normalized, showing the relative locations of activation regions within each model. Probabilities in the figures are displayed to one decimal place.
@@ -263,17 +263,17 @@ The entropy ECDF uses 2,000 fixed samples from each of the train-retain, train-f
 
 The t-SNE analysis uses 1,200 test samples, with 120 samples per class, seed 2022, perplexity 30, and 1,000 iterations. Deer samples are already interspersed with multiple classes in Original. Embeddings are computed separately for each model, producing independent coordinate systems. The qualitative analysis therefore focuses on neighborhood structure within each projection.
 
-% Balance the last two-column page before the one-column appendix.
-\balance
 \section{Discussion and Limitations}
 On both datasets, reducing forgotten-class accuracy is accompanied by a decrease in retained-class accuracy. The unlearning methods have lower computational costs than Retrain but also lower test-retain accuracy, demonstrating a trade-off between execution time and retained-class performance.
 
-On CIFAR-10, the two Boundary Shrink variants improve the metrics relative to the baseline in this run, but the individual contributions of their components have not been isolated. DW simultaneously changes pseudo-labels, attack normalization, and sample weights; DW+KL-S changes initialization, the teacher, and the computational budget. Since these factors change together, the observed differences reflect the effects of the overall configurations.
+On CIFAR-10, the two Boundary Shrink variants improve the metrics relative to the baseline in this run, but the individual contributions of their components have not been isolated. W simultaneously changes pseudo-labels, attack normalization, and sample weights; W+KL-S changes initialization, the teacher, and the computational budget. Since these factors change together, the observed differences reflect the effects of the overall configurations.
 
+% Balance the last two-column page before the one-column appendix.
+\balance
 The experiments use one seed and one forgotten class per dataset. Variability across runs and forgotten classes has not been investigated. On CIFAR-100, the test-forget set contains 100 images, so each image corresponds to one percentage point of accuracy. The study does not use an independent validation set and does not evaluate privacy through membership inference attacks (MIA). The conclusions are therefore limited to the forgotten classes, architecture, and configurations examined.
 
 \section{Conclusion}
-This report evaluates the same four models---Original, Retrain, Boundary Shrink, and Boundary Expanding---on CIFAR-10 and CIFAR-100. In both settings, Boundary Shrink and Boundary Expanding reduce forgotten-class accuracy at a lower cost than Retrain while degrading retained-class performance. In the CIFAR-10 experiment, two Boundary Shrink variants improve test-retain accuracy over the baseline. DW+KL-S achieves 65.74\% test-retain accuracy and 1.70\% test-forget accuracy, with a total execution time of 226.97 seconds and a $1.76\times$ speedup over Retrain. DW+KL-S improves retained-class accuracy relative to Boundary Shrink but remains below Retrain and takes longer than the baseline method.
+This report evaluates the same four models---Original, Retrain, Boundary Shrink, and Boundary Expanding---on CIFAR-10 and CIFAR-100. In both settings, Boundary Shrink and Boundary Expanding reduce forgotten-class accuracy at a lower cost than Retrain while degrading retained-class performance. In the CIFAR-10 experiment, two Boundary Shrink variants improve test-retain accuracy over the baseline. W+KL-S achieves 65.74\% test-retain accuracy and 1.70\% test-forget accuracy, with a total execution time of 226.97 seconds and a $1.76\times$ speedup over Retrain. W+KL-S improves retained-class accuracy relative to Boundary Shrink but remains below Retrain and takes longer than the baseline method.
 
 \begin{thebibliography}{10}
 \bibitem{bourtoule2021machine}

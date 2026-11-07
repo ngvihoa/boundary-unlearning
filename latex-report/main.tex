@@ -27,7 +27,7 @@
 Machine Unlearning hướng đến loại bỏ ảnh hưởng của dữ liệu được yêu cầu quên khỏi mô hình đã huấn luyện. Tuy nhiên, huấn luyện lại mô hình từ đầu trên phần dữ liệu còn lại thường tốn nhiều thời gian và tài nguyên. Boundary Unlearning tiếp cận vấn đề này bằng cách dịch chuyển ranh giới quyết định, nhằm thay đổi dự đoán trên lớp cần quên trong khi hạn chế ảnh hưởng đến các lớp cần giữ lại. Nghiên cứu này đánh giá hai phương pháp Boundary Shrink và Boundary Expanding, đồng thời khảo sát các cấu hình cải tiến của Boundary Shrink thông qua tìm ngưỡng vượt biên, gán trọng số theo độ tin cậy của nhãn giả và chưng cất tri thức với mô hình đã được huấn luyện trước. Các thí nghiệm so sánh phương pháp với mô hình Original và Retrain trên CIFAR-10 và CIFAR-100, riêng các cấu hình cải tiến được đánh giá trên CIFAR-10. Kết quả cho thấy Boundary Shrink và Boundary Expanding giảm khả năng nhận diện lớp cần quên, nhưng làm suy giảm hiệu năng trên các lớp cần giữ lại. Các cấu hình cải tiến khôi phục một phần hiệu năng trên lớp giữ lại, đi kèm với chi phí tính toán cao hơn.
 \end{abstract}
 \begin{IEEEkeywords}
-Machine Unlearning, Class Unlearning, Boundary Shrink, Boundary Expanding, CIFAR-10, CIFAR-100, Knowledge Distillation.
+Machine Unlearning, Class Unlearning, Boundary Shrink, Boundary Expanding, CIFAR-10, CIFAR-100.
 \end{IEEEkeywords}
 
 \section{Giới thiệu}
